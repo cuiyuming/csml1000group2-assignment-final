@@ -1,0 +1,98 @@
+---
+title: "CSML1000-003-O-F19 - Group 2 - Assignment Final"
+author: "Rajiv Kaushik, Yuming Cui, Madana Bolla, Pratik Chandwani, Konstantin Krassavine"
+date: "09/11/2019"
+output: html_document
+---
+
+# Data Description
+
+##Context
+This database contains 76 attributes, but all published experiments refer to using a subset of 14 of them. In particular, the Cleveland database is the only one that has been used by ML researchers to this date. The "goal" field refers to the presence of heart disease in the patient. It is integer valued from 0 (no presence) to 4.
+
+##Content
+
+Attribute Information:
+> 1. age
+> 2. sex
+> 3. chest pain type (4 values)
+> 4. resting blood pressure
+> 5. serum cholestoral in mg/dl
+> 6. fasting blood sugar > 120 mg/dl
+> 7. resting electrocardiographic results (values 0,1,2)
+> 8. maximum heart rate achieved
+> 9. exercise induced angina
+> 10. oldpeak = ST depression induced by exercise relative to rest
+> 11. the slope of the peak exercise ST segment
+> 12. number of major vessels (0-3) colored by flourosopy
+> 13. thal: 3 = normal; 6 = fixed defect; 7 = reversable defect
+The names and social security numbers of the patients were recently removed from the database, replaced with dummy values. One file has been "processed", that one containing the Cleveland database. All four unprocessed files also exist in this directory.
+
+
+#Install packages
+```{r}
+#install.packages("mice")
+#install.packages("VIM")
+
+library(mice)
+library(VIM)
+```
+
+## Load dataset
+Read data
+```{r}
+#Read data
+heart <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
+```
+
+
+
+
+
+View summary of data
+```{r}
+head(heart, 5)
+summary(heart)
+```
+## Data imputation preparation
+### View miss data pattern with md.pattern
+```{r}
+md.pattern(heart)
+```
+### View miss data pattern with VIM
+```{r}
+ mice_plot <- aggr(heart, col=c('navyblue','yellow'),
+                    numbers=TRUE, sortVars=TRUE,
+                    labels=names(heart), cex.axis=.7,
+                    gap=3, ylab=c("Missing data","Pattern"))
+```
+Let's quickly understand this, There are 64% values in the data set with no missing values. There are 15% missing values in age, 10% in fbs, 10% in slope, and 9% in cp.
+
+### Impute missing values
+```{r}
+imputed_Data <- mice(heart, m=5, maxit = 100, method = 'pmm', seed = 500)
+imputed_Data
+```
+Here is an explanation of the parameters used:
+
+m  – Refers to 5 imputed data sets
+maxit – Refers to no. of iterations taken to impute missing values
+method – Refers to method used in imputation. we used predictive mean matching.
+
+Check imputed age vlaues:
+```{r}
+imputed_Data$imp$age
+```
+Check imputed cp(chect pain scale) vlaues:
+```{r}
+imputed_Data$imp$cp
+```
+
+Put the imputed values back to the dataset.
+```{r}
+combineData<-complete(imputed_Data)
+summary(combineData)
+```
+
+Now combineData contains all the imputed values and non missing values.
+
