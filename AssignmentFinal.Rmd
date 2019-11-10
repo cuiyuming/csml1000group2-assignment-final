@@ -34,11 +34,18 @@ The names and social security numbers of the patients were recently removed from
 #install.packages("mice")
 #install.packages("VIM")
 #install.packages("Hmisc")
+#install.packages("knitr", dependencies = TRUE)
 library(Hmisc)
-
+library()
 library(mice)
 library(VIM)
 library(ggplot2)
+library(EnvStats)
+library(cluster)
+library(corrplot)
+library(NbClust)
+library(factoextra)
+library(knitr)
 ```
 
 ## Load dataset
@@ -73,8 +80,6 @@ maxit – Refers to no. of iterations taken to impute missing values
 method – Refers to method used in imputation. we used predictive mean matching.
 ```{r message=FALSE, echo=FALSE,warning=FALSE}
 imputed_Data <- mice(heart, m=5, maxit = 10, method = 'pmm', seed = 500)
-#"","age","sex","cp","trestbps","chol","fbs","restecg","thalach","exang","oldpeak","slope","ca","thal","target"
-#imputed_Data <- aregImpute(~ age + sex + trestbps + chol+ fbs + restecg + exang + oldpeak + slope + cp + ca + thal + target, data = heart, n.impute = 5, nk=0)
 imputed_Data
 ```
 
@@ -95,3 +100,191 @@ summary(combineData)
 
 Now combineData contains all the imputed values and non missing values.
 
+# summary(raw)
+
+## Visualizations
+```{r}
+#Melt data
+melt_data = melt(combineData, id.vars=c("X"))
+#visualize spread of data
+ggplot(melt_data,  mapping = aes(x = value)) + geom_bar(fill = "#FF6666") + facet_wrap(~variable, scales = 'free_x')
+boxplot(combineData[,-c(1)])
+```
+Above shows data needs scaling and has outliers
+
+## Checking outlier
+```{r}
+#3 outlier
+rosnerTest(combineData$age, k = 4, warn = F)
+#3 outlier
+rosnerTest(combineData$cp, k = 4, warn = F)
+#3 outlier
+rosnerTest(combineData$trestbps, k = 4, warn = F)
+#0 outliers
+rosnerTest(combineData$chol, k = 4, warn = F)
+#4 outliers
+rosnerTest(combineData$fbs, k = 4, warn = F)
+#4 outliers
+rosnerTest(combineData$restecg, k = 4, warn = F)
+#4 outliers
+rosnerTest(combineData$thalach, k = 4, warn = F)
+#4 outliers
+rosnerTest(combineData$exang, k = 4, warn = F)
+#4 outliers
+rosnerTest(combineData$oldpeak, k = 4, warn = F)
+#4 outliers
+rosnerTest(combineData$slope, k = 4, warn = F)
+#0 outliers
+rosnerTest(combineData$ca, k = 4, warn = F)
+#2 outliers
+rosnerTest(combineData$thal, k = 4, warn = F)
+```
+*Only these four columns have outliers
++ trestbps
++ chol
++ oldpeak
++ thal
+
+# Data preparation
+We replaced outliers with 5th and 95th percentile values.
+
+```{r}
+#replace outliers with 5th and 95th percentile values
+#remember An outlier is not any point over the 95th percentile 
+#or below the 5th percentile. Instead, an outlier is considered so 
+#if it is below the first quartile – 1.5·IQR or above third quartile + 1.5·IQR.
+capOutlier <- function(x){
+   qnt <- quantile(x, probs=c(.25, .75), na.rm = T)
+   caps <- quantile(x, probs=c(.05, .95), na.rm = T)
+   H <- 1.5 * IQR(x, na.rm = T)
+   x[x < (qnt[1] - H)] <- caps[1]
+   x[x > (qnt[2] + H)] <- caps[2]
+   return(x)
+}
+combineData$trestbps=capOutlier(combineData$trestbps)
+combineData$chol=capOutlier(combineData$chol)
+combineData$oldpeak=capOutlier(combineData$oldpeak)
+combineData$thal=capOutlier(combineData$thal)
+
+
+
+#scale data, and remove rowid and target
+data_scaled <- data.frame(scale(combineData[-c(1, 15)]))
+#visualize how well data was scaled
+boxplot(data_scaled)
+#scaling looks good
+```
+
+
+
+```{r}
+#corr of data
+corrmatrix <- cor(data_scaled)
+corrplot(corrmatrix, method = 'pie', type="upper")
+```
+There is no two columns have strong correlations bigger than 50%
+
+
+
+# PCA and reduction
+
+```{r}
+# ##### Build pca using princomp
+data_pca1 <- princomp(data_scaled)
+#examine the importance of PCs
+summary(data_pca1)
+# inspect principal components
+# loadings shows variance and and how much each variable contributes to each components
+loadings(data_pca1)
+fviz_pca_var(data_pca1,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+```
+
+Above shows that first 10 give us 89% of the variance
+We don't see one variable being overbearing
+
+
+```{r}
+# ###### using princomp first 10 give us 90% of the variance
+# ##### build pca using prcomp
+data_pca2 <- prcomp(data_scaled)
+summary(data_pca2)
+#above shows first 6 account for 88% variance
+#plot
+plot(data_pca2)
+# scree plot
+plot(data_pca2, type = "lines")
+
+fviz_pca_var(data_pca2,
+             col.var = "contrib", # Color by contributions
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+             )
+```
+Above shows first 10 account for 89% variance
+
+Please note: The result from PCA tells us there is no varaiables which dominate, therefore we are not able to reduce any demisions.  
+
+## Exploration of the data
+
+Drop row id
+```{r}
+data<- combineData[-c(1)]
+```
+
+We explored the different variables in combineData to see which ones were more likes to affect our random forest algorithm.
+```{r}
+names(data)
+```
+```{r}
+library(ggplot2)
+```
+
+Looks like male has better change to get heart desease
+```{r echo=FALSE}
+plot(factor(target) ~ sex, data = data)
+title(main="Target by Gender")
+```
+
+
+The higher cholestoral is not necessary the higher change of getting heart desease.
+```{r echo=FALSE}
+ggplot(data=data, aes(chol, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Serum cholestoral in mg/dl") + theme_bw()
+```
+
+And blood presssure is not playing a signicent role in heart deasease
+```{r echo=FALSE}
+ggplot(data=data, aes(trestbps, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Resting blood pressure") + theme_bw()
+```
+
+If you heart beat too fast when you are resting, you should be more careful.
+```{r echo=FALSE}
+ggplot(data=data, aes(thalach, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By heart rate ") + theme_bw()
+```
+
+```{r}
+names(data)
+```
+
+```{r}
+library(caret)
+set.seed(3456)
+trainingIndex = createDataPartition(data$age, p = 0.75, list=FALSE)
+trainData = data[trainingIndex,]
+testData = data[-trainingIndex,]
+nrow(trainData)
+```
+
+
+## Build a model  
+Finally, I created a random forest algorithm using the `randomForest` package in R. For my formula, I used every variable in `train` 
+```{r}
+library(randomForest)
+set.seed(0)
+rf <- randomForest(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, ntree=401)
+importance(rf)
+print(rf)
+```
