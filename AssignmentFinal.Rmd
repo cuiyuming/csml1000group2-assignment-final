@@ -30,12 +30,15 @@ The names and social security numbers of the patients were recently removed from
 
 
 #Install packages
-```{r}
+```{r echo=FALSE message = FALSE}
 #install.packages("mice")
 #install.packages("VIM")
+#install.packages("Hmisc")
+library(Hmisc)
 
 library(mice)
 library(VIM)
+library(ggplot2)
 ```
 
 ## Load dataset
@@ -44,10 +47,6 @@ Read data
 #Read data
 heart <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
 ```
-
-
-
-
 
 View summary of data
 ```{r}
@@ -69,15 +68,15 @@ md.pattern(heart)
 Let's quickly understand this, There are 64% values in the data set with no missing values. There are 15% missing values in age, 10% in fbs, 10% in slope, and 9% in cp.
 
 ### Impute missing values
-```{r}
-imputed_Data <- mice(heart, m=5, maxit = 100, method = 'pmm', seed = 500)
-imputed_Data
-```
-Here is an explanation of the parameters used:
-
 m  – Refers to 5 imputed data sets
 maxit – Refers to no. of iterations taken to impute missing values
 method – Refers to method used in imputation. we used predictive mean matching.
+```{r message=FALSE, echo=FALSE,warning=FALSE}
+imputed_Data <- mice(heart, m=5, maxit = 10, method = 'pmm', seed = 500)
+#"","age","sex","cp","trestbps","chol","fbs","restecg","thalach","exang","oldpeak","slope","ca","thal","target"
+#imputed_Data <- aregImpute(~ age + sex + trestbps + chol+ fbs + restecg + exang + oldpeak + slope + cp + ca + thal + target, data = heart, n.impute = 5, nk=0)
+imputed_Data
+```
 
 Check imputed age vlaues:
 ```{r}
@@ -88,7 +87,7 @@ Check imputed cp(chect pain scale) vlaues:
 imputed_Data$imp$cp
 ```
 
-Put the imputed values back to the dataset.
+Merge the imputed values back to the dataset.
 ```{r}
 combineData<-complete(imputed_Data)
 summary(combineData)
