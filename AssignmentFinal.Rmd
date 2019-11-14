@@ -36,7 +36,7 @@ The names and social security numbers of the patients were recently removed from
 #install.packages("Hmisc")
 #install.packages("knitr", dependencies = TRUE)
 library(Hmisc)
-library()
+library(caret)
 library(mice)
 library(VIM)
 library(ggplot2)
@@ -50,7 +50,9 @@ library(pROC)
 library(rpart)
 library(rpart.plot)
 library(neuralnet)
-library(gbm, quietly=TRUE)
+library(gbm)
+library(ROCR)
+library(effects)
 ```
 
 ## Load dataset
@@ -284,20 +286,52 @@ testData = data[-trainingIndex,]
 nrow(trainData)
 ```
 
+
 ##Logistic Regression Model
 ```{r}
 lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
 ###Shows that the following variables are predictors of target variable
 ###sex,cp, restecg, exang, oldpeak, ca
-###AIC 194
 summary(lr.fit)
-###plot the logistic regression model against predictor variables
-# After we have summarised our model, we will visual it through the following plots
-plot(lr.fit)
+lr.prob=predict(lr.fit,type="response")
+summary(lr.prob)
+#compute average prediction for true outcomes
+#TP are 78%, that is predicting presence of heart disease correctly 78% of the time 
+#TN are 26%, that is predicting no heart disease when there is none 26% of the time
+#78% is not bad, it can be improved
+tapply(lr.prob,trainData$target,mean)
+#now we will convert probabilities to predictions using ROC curves
+#ROC curve will help find the threshold
+ROCRpred = prediction(lr.prob, trainData$target)
+ROCRperf = performance(ROCRpred, "tpr", "fpr")
+# Plot ROC curve
+plot(ROCRperf)
+# Add colors
+plot(ROCRperf, colorize=TRUE)
+# Add threshold labels 
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+#We want high TRUE POSITIVES or Sensitivity for diagnosing heart disease, and are ok with higher false positive 
+#Therefore the threshold is at (0.9,0.2) where 90% with heart disease are diagnosed correctly
+#At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease 
+
+
+#with 0.5 as threshold, lets predict on test dataset
+lrtest.prob=predict(lr.fit,type="response", newdata=testData)
+#generate confusion matrix 
+#Confusion matris shows that model predicts no heart disease for 4 people who have heart disease
+#Also predicts heart disease correctly for 35 peoplewho actually have heart disease
+table(testData$target,lrtest.prob >= 0.5)
+#Sensitivity is 35/(35+4)=89%
 # In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
-lr.predict <- predict(lr.fit,testData, probability = TRUE)
+# ROC curve validates that sensitivity is 89.6% 
 auc.lr = roc(testData$target, lr.predict, plot = TRUE, col = "blue")
 auc.lr
+
+
+###plot the logistic regression model against predictor variables
+# After we have summarised our model, we will visualize it through the following plots
+plotd(lr.fit)
+plot(allEffects(lr.fit))
 ```
 
 
