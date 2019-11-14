@@ -302,14 +302,14 @@ summary(lr.prob)
 tapply(lr.prob,trainData$target,mean)
 #now we will convert probabilities to predictions using ROC curves
 #ROC curve will help find the threshold
-ROCRpred = prediction(lr.prob, trainData$target)
-ROCRperf = performance(ROCRpred, "tpr", "fpr")
+lr.predict = prediction(lr.prob, trainData$target)
+lr.perf = performance(lr.predict, "tpr", "fpr")
 # Plot ROC curve
-plot(ROCRperf)
+plot(lr.perf)
 # Add colors
-plot(ROCRperf, colorize=TRUE)
+plot(lr.perf, colorize=TRUE)
 # Add threshold labels 
-plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+plot(lr.perf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
 #We want high TRUE POSITIVES or Sensitivity for diagnosing heart disease, and are ok with higher false positive 
 #Therefore the threshold is at (0.9,0.2) where 90% with heart disease are diagnosed correctly
 #At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease 
@@ -321,17 +321,19 @@ lrtest.prob=predict(lr.fit,type="response", newdata=testData)
 #Confusion matris shows that model predicts no heart disease for 4 people who have heart disease
 #Also predicts heart disease correctly for 35 peoplewho actually have heart disease
 table(testData$target,lrtest.prob >= 0.5)
-#Sensitivity is 35/(35+4)=89%
+sensitivity = (35/(35+4))*100
+# Logistic Regression Model Sensitivity= 89%
 # In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
 # ROC curve validates that sensitivity is 89.6% 
-auc.lr = roc(testData$target, lr.predict, plot = TRUE, col = "blue")
+auc.lr = roc(testData$target, lrtest.prob, plot = TRUE, col = "blue")
 auc.lr
 
 
 ###plot the logistic regression model against predictor variables
 # After we have summarised our model, we will visualize it through the following plots
-plotd(lr.fit)
 plot(allEffects(lr.fit))
+
+
 ```
 
 
@@ -340,10 +342,15 @@ plot(allEffects(lr.fit))
 dt.fit <- rpart(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, trainData,method = 'class')
 dt.predict <- predict(dt.fit, testData, type = 'class')
 dt.probability <- predict(dt.fit, testData, type = 'prob')
+
 rpart.plot(dt.fit)
 rpart.plot(dt.fit)
+# In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
+# ROC curve shows sensitivity = 82% 
 auc.dt = roc(testData$target, factor(dt.predict, ordered = TRUE), plot = TRUE, col = "blue")
 auc.dt
+
+
 ```
 
 # Now use Artificial Neural Networks
