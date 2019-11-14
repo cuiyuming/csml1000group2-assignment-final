@@ -46,6 +46,11 @@ library(corrplot)
 library(NbClust)
 library(factoextra)
 library(knitr)
+library(pROC)
+library(rpart)
+library(rpart.plot)
+library(neuralnet)
+library(gbm, quietly=TRUE)
 ```
 
 ## Load dataset
@@ -60,6 +65,7 @@ View summary of data
 head(heart, 5)
 summary(heart)
 ```
+
 ## Data imputation preparation
 ### View miss data pattern with md.pattern
 ```{r}
@@ -278,13 +284,70 @@ testData = data[-trainingIndex,]
 nrow(trainData)
 ```
 
-
-## Build a model  
-Finally, I created a random forest algorithm using the `randomForest` package in R. For my formula, I used every variable in `train` 
+##Logistic Regression Model
 ```{r}
-library(randomForest)
-set.seed(0)
-rf <- randomForest(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, ntree=401)
-importance(rf)
-print(rf)
+lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
+###Shows that the following variables are predictors of target variable
+###sex,cp, restecg, exang, oldpeak, ca
+###AIC 194
+summary(lr.fit)
+###plot the logistic regression model against predictor variables
+# After we have summarised our model, we will visual it through the following plots
+plot(lr.fit)
+# In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
+lr.predict <- predict(lr.fit,testData, probability = TRUE)
+auc.lr = roc(testData$target, lr.predict, plot = TRUE, col = "blue")
+auc.lr
 ```
+
+
+# Now use Decision Tree algorithm and plot using rpart
+```{r}
+dt.fit <- rpart(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, trainData,method = 'class')
+dt.predict <- predict(dt.fit, testData, type = 'class')
+dt.probability <- predict(dt.fit, testData, type = 'prob')
+rpart.plot(dt.fit)
+rpart.plot(dt.fit)
+auc.dt = roc(testData$target, factor(dt.predict, ordered = TRUE), plot = TRUE, col = "blue")
+auc.dt
+```
+
+# Now use Artificial Neural Networks
+#since predicted variable is probabilty and continous, convert to  0 or 1 factor
+```{r}
+ann.fit =neuralnet(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca,trainData,linear.output=FALSE)
+plot(ann.fit)
+ann.predict=compute(ann.fit,testData)
+annResult=ann.predict$net.result
+annResult=ifelse(annResult>0.5,1,0)
+auc.ann = roc(testData$target, factor(annResult, ordered = TRUE), plot = TRUE, col = "blue")
+auc.ann
+```
+
+## Now use Gradient Boosting. This uses ensemble models like weak decision trees
+##These decision trees combine together to form a strong model of gradient boosting
+```{r}
+system.time(
+gbm.fit <- gbm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca
+, distribution = "bernoulli"
+, data =trainData
+, n.trees = 1000
+, interaction.depth = 6
+, n.minobsinnode = 10
+, shrinkage = 0.1
+, bag.fraction = 0.5
+, train.fraction = nrow(trainData) / (nrow(trainData) + nrow(testData))
+)
+)
+# Determine best iteration based on test data
+gbm.iter = gbm.perf(gbm.fit, method = "test")
+model.influence = relative.influence(gbm.fit, n.trees = gbm.iter, sort. = TRUE)
+#Plot the gbm model
+plot(gbm.fit)
+# Plot and calculate AUC on test data
+gbm.test = predict(gbm.fit, newdata = testData, n.trees = gbm.iter)
+auc.gbm = roc(testData$target, gbm.test, plot = TRUE, col = "red")
+print(auc.gbm)
+auc.gbm
+```
+
