@@ -16,6 +16,7 @@ library(gbm)
 library(rpart)
 library(rpart.plot)
 
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -45,7 +46,8 @@ ui <- fluidPage(
         mainPanel(
             tabsetPanel(type = "tabs",
                         tabPanel("Predicted Plot",  
-                                 plotOutput("plot_predicted")
+                                 plotOutput("plot_predicted"),
+                                 tableOutput("table_predicted")
                         ),
                         tabPanel("Corralation Plot",  
                                  fluidRow(
@@ -89,63 +91,79 @@ server <- function(input, output) {
   
   
   inputList <-reactive ({  
-    
-    inputData <- data.frame(input$age,
-                   as.numeric(input$sex),
-                   input$cp,
-                   input$trestbps,
-                   input$chol,
-                   as.numeric(input$fbs),
-                   input$restecg,
-                   input$thalach,
-                   as.numeric(input$exang),
-                   input$oldpeak,
-                   input$slope,
-                   input$ca,
-                   input$thal)
   
-                    
+    inputData <- data.frame("age" = input$age,
+                   "sex" = as.numeric(input$sex),
+                   "cp" = input$cp,
+                   "trestbps" = input$trestbps,
+                   "chol" = input$chol,
+                   "fbs" = as.numeric(input$fbs),
+                   "restecg" = input$restecg,
+                   "thalach" = input$thalach,
+                   "exang" = as.numeric(input$exang),
+                   "oldpeak" = input$oldpeak,
+                   "slope" = input$slope,
+                   "ca" = input$ca,
+                   "thal" = input$thal)
                   return (inputData)
   })
   
   pca.princomp <- princomp(data)
   pca.prcomp <- prcomp(data)
   
+  
+  # data$age <- scaled$age
+  # data$trestbps <- scaled$trestbps
+  # data$chol <- scaled$chol
+  # data$thalach <- scaled$thalach
+  # data$oldpeak <- scaled$oldpeak
     
-    # output$plot_predicted <- renderPlot({
-    # 
-    #   patientData <- trainData[1,]
-    # 
-    #   patientData$age = input$age
-    #   patientData$sex = as.numeric(input$sex)
-    #   patientData$cp =   input$cp
-    #   patientData$trestbps =  input$trestbps
-    #   patientData$chol = input$chol
-    #   patientData$fbs =  as.numeric(input$fbs)
-    #   patientData$restecg =  input$restecg
-    #   patientData$thalach =  input$thalach
-    #   patientData$exang =  as.numeric(input$exang)
-    #   patientData$oldpeak = input$oldpeak
-    #   patientData$slope =   input$slope
-    #   patientData$ca = input$ca
-    #   patientData$thal =  input$thal
-    #   
-    # 
-    #   lr_predcited_value <- predict(lr_model, scale(patientData))
-    #    dt_predcited_value <- predict(dt_model, items)
-    #    ann_predcited_value <- predict(ann_model, items)
-    #    gb_predcited_value <- predict(gb_model, items)
-    # 
-    #   predictedData <- c(lr_predcited_value,dt_predcited_value,ann_predcited_value,gb_predcited_value)
-    #   models <- c("LR", "DT", "ANN", "GB")
-    # 
-    #   df1 <- data.frame(models, predictedData)
-    #   df2 <- melt(df1, id.vars='models')
-    # 
-    # 
-    #   ggplot(df2, aes(x=models, y=predictedData, fill=variable)) + geom_bar(stat='identity', position='dodge')
-    # 
-    # })
+    output$plot_predicted <- renderPlot({
+      age <- as.numeric(input$age)
+      age <- ((age - mean(heart$age))/sd(heart$age))
+      
+      trestbps <- as.numeric(input$trestbps)
+      trestbps <- ((trestbps - mean(heart$trestbps))/sd(heart$trestbps))
+      
+      chol <- as.numeric(input$chol)
+      chol <- ((chol - mean(heart$chol))/sd(heart$chol))
+      
+      thalach <- as.numeric(input$thalach)
+      thalach <- ((thalach - mean(heart$thalach))/sd(heart$thalach))
+      
+      oldpeak <- as.numeric(input$oldpeak)
+      oldpeak <- ((oldpeak - mean(heart$oldpeak))/sd(heart$oldpeak))
+
+      inputData <- data.frame("age" = age,
+                              "sex" = as.numeric(input$sex),
+                              "cp" = as.numeric(input$cp),
+                              "trestbps" = trestbps,
+                              "chol" = chol,
+                              "fbs" = as.numeric(input$fbs),
+                              "restecg" = as.numeric(input$restecg),
+                              "thalach" = thalach,
+                              "exang" = as.numeric(input$exang),
+                              "oldpeak" = oldpeak,
+                              "slope" = as.numeric(input$slope),
+                              "ca" = as.numeric(input$ca),
+                              "thal" = as.numeric(input$thal))
+      
+
+      lr_predcited_value <- predict(lr_model, inputData, type="response")
+       dt_predcited_value <- predict(dt_model, inputData, type = 'class')
+       ann_predcited_value <- predict(ann_model, inputData)
+       gbm.iter = gbm.perf(gb_model, method = "test")
+       gb_predcited_value <-  predict(gb_model, newdata = inputData, n.trees = gbm.iter)
+
+      predictedData <- c(lr_predcited_value,dt_predcited_value,ann_predcited_value,gb_predcited_value)
+      models <- c("LR", "DT", "ANN", "GB")
+
+      df1 <- data.frame(models, predictedData)
+      df2 <- melt(df1, id.vars='models')
+
+      ggplot(df2, aes(x=models, y=predictedData, fill=variable)) + geom_bar(stat='identity', position='dodge')
+
+    })
 
     output$plot_age <- renderPlot({
         ggplot(data=heart, aes(age, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Age") + theme_bw()
