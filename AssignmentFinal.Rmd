@@ -380,9 +380,11 @@ We use two methods:
 2. Singular value decomposition which examines the covariances / correlations between individuals (prcomp)
 While both methods can easily be performed within R, the singular value decomposition method (i.e., Q-mode) is the preferred analysis for numerical accuracy (R Development Core Team 2011).
 
-* **Both show that first 7-12 features give us 80%-90% of the variance, and that no one variable is overbearing.**
+* **Both show that first 7-10 features give us 80%-90% of the variance, and that no one variable is overbearing.**
 * **Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA** 
-* **PRINCOMP: Notice that first 7 components represent 85% of the variance**
+
+
+**PRINCOMP: Notice that first 7 components represent 85% of the variance**
 
 ```{r}
 
@@ -394,16 +396,12 @@ summary(data_pca1)
 # loadings shows variance and and how much each variable contributes to each components
 #loadings(data_pca1)
 
-fviz_pca_var(data_pca1,
-            col.var = "contrib", # Color by contributions to the PC
-            gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-            repel = TRUE     # Avoid text overlapping
-            )
 
 ```
 
 
-**PRCOMP: Notice that first 12 components represent 86% of the variance**
+
+**PRCOMP: Notice that first 7 components represent 85% of the variance**
 
 ```{r}
 
@@ -417,11 +415,6 @@ summary(data_pca2)
 # scree plot
 #plot(data_pca2, type = "lines")
 
-fviz_pca_var(data_pca2,
-            col.var = "contrib", # Color by contributions
-            gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-            repel = TRUE     # Avoid text overlapping
-            )
 
 ```
 
@@ -567,7 +560,10 @@ auc.lr
    * Stress Test depression (oldpeak)
    * Number of colored vessels (ca)
 
+
+
 7. **Gender** versus Target variable
+
 * **Heart disease is more prevalent in females than males**
 
 ```{r echo=FALSE}
@@ -577,6 +573,7 @@ ggplot(data=data, aes(x=sex, fill=as.factor(target))) +
    ggtitle("Target By Gender")
 
 ```
+
 
 
 8. **Type of Chest Pain** versus Target variable
@@ -591,6 +588,8 @@ ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
 
 ```
 
+
+
 9. **Resting ECG result** versus Target variable
 
 **Higher ECG result predics heart disease** 
@@ -600,6 +599,7 @@ ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
   geom_bar() +
    ggtitle("Target By ECG result")
 ```
+
 
 
 10. **Exercise Induced Angina** versus Target variable
@@ -634,7 +634,6 @@ ggplot(data=data, aes(x=ca, fill=as.factor(target))) +
    ggtitle("Target By Number of Colored Vessels")
 
 ```
-
 
 
 
@@ -704,7 +703,6 @@ A decision tree is a flowchart-like tree structure where an internal node repres
 
 2. **Run the model against training data, predict target on test data**
 
-2. **Run the model against training data, predict target on test data**
 
 ```{r}
 dt.fit <- rpart(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, trainData,method = 'class')
@@ -714,6 +712,9 @@ saveRDS(dt.fit, "./HeartDiseaseCleveland/decisionTree.rds")
 
 dt.predict <- predict(dt.fit, testData, type = 'class')
 dt.probability <- predict(dt.fit, testData, type = 'prob')
+
+rpart.plot(dt.fit)
+
 ```
 
 
@@ -723,7 +724,6 @@ dt.probability <- predict(dt.fit, testData, type = 'prob')
 
 
 ```{r}
-rpart.plot(dt.fit)
 # In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
 # ROC curve shows sensitivity = 82% 
 
@@ -737,6 +737,8 @@ auc.dt
 
 ### Artificial Neural Networks (ANN) Model
 1. **Overview**
+
+Neural networks are a set of algorithms, modeled loosely after the human brain, that are designed to recognize patterns. They interpret sensory data through a kind of machine perception, labeling or clustering raw input. The patterns they recognize are numerical, contained in vectors, into which all real-world data, be it images, sound, text or time series, must be translated.
 
 
 2. **Run the model against training data, predict target on test data**
@@ -753,6 +755,7 @@ annResult=ann.predict$net.result
 #since predicted variable is probabilty and continous, convert to  0 or 1 factor
 annResult=ifelse(annResult>0.5,1,0)
 ```
+
 
 3. **Evaluate the model** - 
 
