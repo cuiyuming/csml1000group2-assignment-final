@@ -372,7 +372,6 @@ boxplot(data,main="Standardized variables with No Outliers")
 
 
 ### PCA and Reduction of features
-<<<<<<< HEAD
 
 Let's attempt to reduce dimensionality of dataset with Principal Component Analysis (PCA).
 
@@ -383,22 +382,6 @@ While both methods can easily be performed within R, the singular value decompos
 
 * **Both show that first 7-12 features give us 80%-90% of the variance, and that no one variable is overbearing.**
 * **Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA** 
-=======
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
-
-Let's attempt to reduce dimensionality of dataset with Principal Component Analysis (PCA).
-
-We use two methods:
-1. Spectral decomposition which examines the covariances / correlations between variables (princomp)
-2. Singular value decomposition which examines the covariances / correlations between individuals (prcomp)
-While both methods can easily be performed within R, the singular value decomposition method (i.e., Q-mode) is the preferred analysis for numerical accuracy (R Development Core Team 2011).
-
-* **Both show that first 7-12 features give us 80%-90% of the variance, and that no one variable is overbearing.**
-* **Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA** 
-
-
-* **PRINCOMP: Notice that first 7 components represent 85% of the variance**
-
 * **PRINCOMP: Notice that first 7 components represent 85% of the variance**
 
 ```{r}
@@ -410,19 +393,12 @@ summary(data_pca1)
 # inspect principal components
 # loadings shows variance and and how much each variable contributes to each components
 #loadings(data_pca1)
-<<<<<<< HEAD
-#fviz_pca_var(data_pca1,
-#             col.var = "contrib", # Color by contributions to the PC
-#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#             repel = TRUE     # Avoid text overlapping
-#             )
-=======
+
 fviz_pca_var(data_pca1,
             col.var = "contrib", # Color by contributions to the PC
             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
             repel = TRUE     # Avoid text overlapping
             )
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 
 ```
 
@@ -440,15 +416,6 @@ summary(data_pca2)
 #plot(data_pca2)
 # scree plot
 #plot(data_pca2, type = "lines")
-<<<<<<< HEAD
-
-#fviz_pca_var(data_pca2,
-#             col.var = "contrib", # Color by contributions
-#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#             repel = TRUE     # Avoid text overlapping
-#             )
-
-=======
 
 fviz_pca_var(data_pca2,
             col.var = "contrib", # Color by contributions
@@ -456,7 +423,6 @@ fviz_pca_var(data_pca2,
             repel = TRUE     # Avoid text overlapping
             )
 
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 ```
 
 
@@ -471,10 +437,6 @@ set.seed(3456)
 trainingIndex = createDataPartition(data$age, p = 0.75, list=FALSE)
 trainData = data[trainingIndex,]
 testData = data[-trainingIndex,]
-<<<<<<< HEAD
-
-=======
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 
 #Save train data for shiny app
 save(trainData, file = "./HeartDiseaseCleveland/trainData.RData")
@@ -511,7 +473,6 @@ If the p-value is less than small threshold (often 0.05 is used), then you can r
 2. **Run the model against training data using the Binomial algo**
 
 Looking at the p values the **following variables are predictors of target variable**
-<<<<<<< HEAD
 
 * Gender(sex)
 * Type of Chest Pain (cp)
@@ -519,20 +480,8 @@ Looking at the p values the **following variables are predictors of target varia
 * Exercise induced Angina (exang)
 * Stress Test depression (oldpeak)
 * Number of colored veins (ca)
-
-=======
-
-* Gender(sex)
-* Type of Chest Pain (cp)
-* Resting ECG result (restecg)
-* Exercise induced Angina (exang)
-* Stress Test depression (oldpeak)
-* Number of colored veins (ca)
-
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 
 3. **Evaluate and refine the model** - 
-
    **Compute average prediction for true outcomes**
    **TP are 78%, that is predicting presence of heart disease correctly 78% of the time**
    **TN are 26%, that is predicting no heart disease when there is none 26% of the time**
@@ -619,8 +568,6 @@ auc.lr
    * Number of colored vessels (ca)
 
 7. **Gender** versus Target variable
-<<<<<<< HEAD
-
 * **Heart disease is more prevalent in females than males**
 
 ```{r echo=FALSE}
@@ -641,16 +588,6 @@ ggplot(data=data, aes(x=sex, fill=as.factor(target))) +
 ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
   geom_bar() +
    ggtitle("Target By Type of Chest Pain")
-=======
-
-* **Heart disease is more prevalent in females than males**
-
-```{r echo=FALSE}
-
-ggplot(data=data, aes(x=sex, fill=as.factor(target))) +
-  geom_bar() +
-   ggtitle("Target By Gender")
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 
 ```
 
@@ -764,10 +701,6 @@ ggplot(data=data, aes(x=ca, fill=as.factor(target))) +
 
 1. **Overview**
 A decision tree is a flowchart-like tree structure where an internal node represents feature(or attribute), the branch represents a decision rule, and each leaf node represents the outcome. The topmost node in a decision tree is known as the root node. It learns to partition on the basis of the attribute value. It partitions the tree in recursively manner call recursive partitioning. This flowchart-like structure helps you in decision making. It's visualization like a flowchart diagram which easily mimics the human level thinking. That is why decision trees are easy to understand and interpret.
-<<<<<<< HEAD
-
-=======
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 
 2. **Run the model against training data, predict target on test data**
 
@@ -775,22 +708,14 @@ A decision tree is a flowchart-like tree structure where an internal node repres
 
 ```{r}
 dt.fit <- rpart(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, trainData,method = 'class')
-dt.predict <- predict(dt.fit, testData, type = 'class')
-dt.probability <- predict(dt.fit, testData, type = 'prob')
-<<<<<<< HEAD
-```
 
-3. **Evaluate the model** - 
-
-**ROC curve shows accuracy of this model is 82%**
-
-
-```{r}
-rpart.plot(dt.fit)
-=======
 # save model for shiny app
 saveRDS(dt.fit, "./HeartDiseaseCleveland/decisionTree.rds")
+
+dt.predict <- predict(dt.fit, testData, type = 'class')
+dt.probability <- predict(dt.fit, testData, type = 'prob')
 ```
+
 
 3. **Evaluate the model** - 
 
@@ -798,10 +723,10 @@ saveRDS(dt.fit, "./HeartDiseaseCleveland/decisionTree.rds")
 
 
 ```{r}
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 rpart.plot(dt.fit)
 # In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
 # ROC curve shows sensitivity = 82% 
+
 auc.dt = roc(testData$target, factor(dt.predict, ordered = TRUE), plot = TRUE, col = "blue")
 auc.dt
 
@@ -845,15 +770,9 @@ auc.ann
 
 1. **Overview**
 This uses ensemble models like weak decision trees. These decision trees combine together to form a strong model of gradient boosting.
-<<<<<<< HEAD
 
 Gradient Boosting Machine (for Regression and Classification) is a forward learning ensemble method. The guiding heuristic is that good predictive results can be obtained through increasingly refined approximations. H2O’s GBM sequentially builds regression trees on all the features of the dataset in a fully distributed way - each tree is built in parallel.
 
-=======
-
-Gradient Boosting Machine (for Regression and Classification) is a forward learning ensemble method. The guiding heuristic is that good predictive results can be obtained through increasingly refined approximations. H2O’s GBM sequentially builds regression trees on all the features of the dataset in a fully distributed way - each tree is built in parallel.
-
->>>>>>> f66afae07c4f1e429c8833c30f2816f57b95f9da
 
 2. **Run the model against training data, predict target on test data**
 
