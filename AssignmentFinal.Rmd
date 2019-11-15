@@ -60,7 +60,7 @@ Attribute Information:
 3. Since prediction of target variable is a probability, use the models to figure out the probability threshold to delineate between no heart disease versus presence of heart disease 
 
 
-```{r installpackages}
+```{r }
 library(Hmisc)
 library(caret)
 library(mice)
@@ -355,7 +355,7 @@ data$trestbps <- scaled$trestbps
 data$chol <- scaled$chol
 data$thalach <- scaled$thalach
 data$oldpeak <- scaled$oldpeak
-save(data, file = "./HeartDiseaseCleveland/scaled.RData")
+save(data, file = "./HeartDiseaseCleveland/scaledData.RData")
 ```
 
 **Visualize prepared data**
@@ -522,7 +522,7 @@ tapply(lr.prob,trainData$target,mean)
 #ROC curve will help find the threshold
 
 #now we will convert probabilities to predictions using ROC curves
-lr.predict = prediction(lr.prob, trainData$target)
+lr.predict = ROCR::prediction(lr.prob, trainData$target)
 lr.perf = performance(lr.predict, "tpr", "fpr")
 # Plot ROC curve
 # Add threshold labels 

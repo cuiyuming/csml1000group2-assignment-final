@@ -9,9 +9,12 @@
 
 library(shiny)
 library(ggplot2)
-library(EnvStats)
-library(nnet)
+library(reshape2)
+library(ROCR)
 library(factoextra)
+library(gbm)
+library(rpart)
+library(rpart.plot)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -41,6 +44,9 @@ ui <- fluidPage(
        
         mainPanel(
             tabsetPanel(type = "tabs",
+                        tabPanel("Predicted Plot",  
+                                 plotOutput("plot_predicted")
+                        ),
                         tabPanel("Corralation Plot",  
                                  fluidRow(
                                     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_age"), plotOutput("plot_cp")),
@@ -76,35 +82,71 @@ server <- function(input, output) {
   dt_model <- readRDS("./decisionTree.rds")
   ann_model <- readRDS("./artificialNeuralNetwork.rds")
   gb_model <- readRDS("./gradientBoosting.rds")
+  
   lr.prob <- predict(lr_model, type="response")
-  lr.predict <- prediction(lr.prob, trainData$target)
+  lr.predict <- ROCR::prediction(lr.prob, trainData$target)
   lr.perf <- performance(lr.predict, "tpr", "fpr")
+  
+  
+  inputList <-reactive ({  
+    
+    inputData <- data.frame(input$age,
+                   as.numeric(input$sex),
+                   input$cp,
+                   input$trestbps,
+                   input$chol,
+                   as.numeric(input$fbs),
+                   input$restecg,
+                   input$thalach,
+                   as.numeric(input$exang),
+                   input$oldpeak,
+                   input$slope,
+                   input$ca,
+                   input$thal)
+  
+                    
+                  return (inputData)
+  })
   
   pca.princomp <- princomp(data)
   pca.prcomp <- prcomp(data)
+  
     
+    # output$plot_predicted <- renderPlot({
+    # 
+    #   patientData <- trainData[1,]
+    # 
+    #   patientData$age = input$age
+    #   patientData$sex = as.numeric(input$sex)
+    #   patientData$cp =   input$cp
+    #   patientData$trestbps =  input$trestbps
+    #   patientData$chol = input$chol
+    #   patientData$fbs =  as.numeric(input$fbs)
+    #   patientData$restecg =  input$restecg
+    #   patientData$thalach =  input$thalach
+    #   patientData$exang =  as.numeric(input$exang)
+    #   patientData$oldpeak = input$oldpeak
+    #   patientData$slope =   input$slope
+    #   patientData$ca = input$ca
+    #   patientData$thal =  input$thal
+    #   
+    # 
+    #   lr_predcited_value <- predict(lr_model, scale(patientData))
+    #    dt_predcited_value <- predict(dt_model, items)
+    #    ann_predcited_value <- predict(ann_model, items)
+    #    gb_predcited_value <- predict(gb_model, items)
+    # 
+    #   predictedData <- c(lr_predcited_value,dt_predcited_value,ann_predcited_value,gb_predcited_value)
+    #   models <- c("LR", "DT", "ANN", "GB")
+    # 
+    #   df1 <- data.frame(models, predictedData)
+    #   df2 <- melt(df1, id.vars='models')
+    # 
+    # 
+    #   ggplot(df2, aes(x=models, y=predictedData, fill=variable)) + geom_bar(stat='identity', position='dodge')
+    # 
+    # })
 
-
-    r <- reactive({
-         age <- input$age
-        sex <- input$sex
-        cp <- input$cp
-        trestbps <- input$trestbps
-        chol <- input$chol
-        fbs <- input$fbs
-        restecg <- input$restecg
-        thalach <- input$thalach
-        exang <- input$exang
-        oldpeak <- input$oldpeak
-        slope <- input$slope
-        ca <- input$ca
-        thal <- input$thal
-    
-        r <- list(heart=heart)
-        return(r)
-    })
-    
-    
     output$plot_age <- renderPlot({
         ggplot(data=heart, aes(age, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Age") + theme_bw()
     })
@@ -157,7 +199,7 @@ server <- function(input, output) {
     })
    
     output$table <- renderTable({
-        r()
+        list(heart)
     })
 }
 
