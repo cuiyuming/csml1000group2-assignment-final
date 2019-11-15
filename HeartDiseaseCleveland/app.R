@@ -8,6 +8,9 @@
 #
 
 library(shiny)
+library(ggplot2)
+library(EnvStats)
+library(nnet)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -37,7 +40,22 @@ ui <- fluidPage(
        
         mainPanel(
             tabsetPanel(type = "tabs",
-                        tabPanel("Visual Output", plotOutput("plot1", height="500px")),
+                        tabPanel("Visual Output",  
+                                 fluidRow(
+                                    splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_age"), plotOutput("plot_cp")),
+                                    splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_trestbps"), plotOutput("plot_chol"))
+                                )
+                        ),
+                        tabPanel("Supervised Models",  
+                                 fluidRow(
+                                   splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_lr"), plotOutput("plot_model_dt")),
+                                   splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_ann"), plotOutput("plot_model_gb"))
+                                 )
+                        ),
+                        # fluidRow(
+                        #     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_lr"), plotOutput("plot_model_dt")),
+                        #     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_ann"), plotOutput("plot_model_gb"))
+                        # )
                         tabPanel("Data", tableOutput("table"))
             )
         )
@@ -47,11 +65,21 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    load("heart.RData")
-   
+   load("heart.RData")
+ load("trainData.RData")
     
+    lr_model <- readRDS("./logisticRegression.rds")
+    dt_model <- readRDS("./decisionTree.rds")
+    ann_model <- readRDS("./artificialNeuralNetwork.rds")
+    gb_model <- readRDS("./gradientBoosting.rds")
+    lr.prob <- predict(lr_model, type="response")
+    lr.predict <- prediction(lr.prob, trainData$target)
+    lr.perf <- performance(lr.predict, "tpr", "fpr")
+    
+  
+
     r <- reactive({
-        age <- input$age
+         age <- input$age
         sex <- input$sex
         cp <- input$cp
         trestbps <- input$trestbps
@@ -64,19 +92,45 @@ server <- function(input, output) {
         slope <- input$slope
         ca <- input$ca
         thal <- input$thal
+    
         r <- list(heart=heart)
         return(r)
     })
     
-    # output$plot1 <- renderPlot({
-    #     # generate bins based on input$bins from ui.R
-    #     x    <- faithful[, 2]
-    #     bins <- seq(min(x), max(x), length.out = input$bins + 1)
-    # 
-    #     # draw the histogram with the specified number of bins
-    #     hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    # })
     
+    output$plot_age <- renderPlot({
+        ggplot(data=heart, aes(age, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Age") + theme_bw()
+    })
+    
+    output$plot_cp <- renderPlot({
+        ggplot(data=heart, aes(cp, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Chest Pain") + theme_bw()
+    })
+    
+    output$plot_trestbps <- renderPlot({
+        ggplot(data=heart, aes(trestbps, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Resting Blood Pressure") + theme_bw()
+    })
+    
+    output$plot_chol <- renderPlot({
+        ggplot(data=heart, aes(chol, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Serum Cholestoral (mg/dl)") + theme_bw()
+    })
+    
+    
+    output$plot_model_lr <- renderPlot({
+        plot(lr.perf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7),main="ROC for Logistic Regression Model")
+    })
+    
+    output$plot_model_dt <- renderPlot({
+        rpart.plot(dt_model, main="Decision Tree Model")
+    })
+    
+    output$plot_model_ann <- renderPlot({
+        plot(ann_model, colorize=TRUE,  main="Artificial Neural Network Model")
+    })
+    
+    output$plot_model_gb <- renderPlot({
+      plot(gb_model, colorize=TRUE, main="Gradient Boosting Model")
+    })
+   
     output$table <- renderTable({
         r()
     })
