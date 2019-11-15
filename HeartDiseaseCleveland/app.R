@@ -51,7 +51,7 @@ ui <- fluidPage(
         mainPanel(
             tabsetPanel(type = "tabs",
                         tabPanel("Predicted Plot",  
-                                 plotOutput("plot_predicted")
+                                 plotOutput("plot_predicted", , height = "800px")
                         ),
                         tabPanel("Corralation Plot",  
                                  fluidRow(
@@ -60,8 +60,12 @@ ui <- fluidPage(
                                 )
                         ),
                         tabPanel("UnSupervised Plot",  
+                            
                                  fluidRow(
-                                   splitLayout(cellWidths = c("50%", "80%"), plotOutput("plot_princomp"), plotOutput("plot_prcomp"))
+                                   plotOutput("plot_princomp", width = "600px")
+                                 ),
+                                 fluidRow(
+                                   plotOutput("plot_prcomp", width = "600px")
                                  )
                         ),
                         tabPanel("Supervised Plot",  
@@ -159,7 +163,7 @@ server <- function(input, output) {
       df1 <- data.frame(models, predictedData)
       df2 <- melt(df1, id.vars='models')
 
-      ggplot(df2, aes(x=models, y=predictedData, fill=variable)) + geom_bar(stat='identity', position='dodge')
+      ggplot(df2, aes(x=models, y=predictedData, fill=variable)) + geom_bar(stat='identity', position='dodge') + coord_cartesian(ylim = c(0, 1))
       
     })
 
