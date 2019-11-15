@@ -47,27 +47,38 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    in.age <- input$age
-    in.sex <- input$sex
-    in.cp <- input$cp
-    in.trestbps <- input$trestbps
-    in.chol <- input$chol
-    in.fbs <- input$fbs
-    in.restecg <- input$restecg
-    in.thalach <- input$thalach
-    in.exang <- input$exang
-    in.oldpeak <- input$oldpeak
-    in.slope <- input$slope
-    in.ca <- input$ca
-    in.thal <- input$thal
+    load("heart.RData")
+   
     
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    r <- reactive({
+        age <- input$age
+        sex <- input$sex
+        cp <- input$cp
+        trestbps <- input$trestbps
+        chol <- input$chol
+        fbs <- input$fbs
+        restecg <- input$restecg
+        thalach <- input$thalach
+        exang <- input$exang
+        oldpeak <- input$oldpeak
+        slope <- input$slope
+        ca <- input$ca
+        thal <- input$thal
+        r <- list(heart=heart)
+        return(r)
+    })
+    
+    # output$plot1 <- renderPlot({
+    #     # generate bins based on input$bins from ui.R
+    #     x    <- faithful[, 2]
+    #     bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    # 
+    #     # draw the histogram with the specified number of bins
+    #     hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    # })
+    
+    output$table <- renderTable({
+        r()
     })
 }
 

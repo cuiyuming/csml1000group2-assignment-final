@@ -153,6 +153,8 @@ imputed <- mice(raw, m=5, maxit = 10, method = 'pmm', seed = 500)
 
 # combine data back into main dataset
 heart<-complete(imputed)
+
+save(heart, file = "./HeartDiseaseCleveland/heart.RData")
 #summary(heart)
 
  mice_plot <- aggr(heart, col=c('navyblue','yellow'),
