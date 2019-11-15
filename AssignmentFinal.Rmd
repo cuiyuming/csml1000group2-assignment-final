@@ -1,5 +1,5 @@
 ---
-title: "CSML1000-003-O-F19 - Group 2 - Assignment Final"
+title: "CSML1000-003-O-F19 - Group 2 Project"
 author: "Rajiv Kaushik, Yuming Cui, Madana Bolla, Pratik Chandwani, Konstantin Krassavine"
 date: "11/15/2019"
 output: html_document
@@ -28,13 +28,17 @@ Predict heart disease in a patient from Cleveland Medical Center, OH, USA. Since
 
 ### Context
 
-This database contains data about the factors related to heart disease. There are 14 attributes from V.A. Medical Center, Long Beach and Cleveland Clinic Foundation. 
-The "target" field refers to the presence of heart disease in the patient. 0 represents "Not a significant risk of heart disease", 1 imlies "Significant risk of heart disease"  
+This database contains data about the factors related to heart disease. There are 14 attributes from Cleveland Clinic Foundation. 
+The "target" field refers to the presence or high risk of heart disease in the subject. 
+
+* 0 represents no heart disease present
+* 1 implies presence of heart disease"  
 
 
 ### Content
 
 Attribute Information:
+
  1. age
  2. sex
  3. chest pain type (4 values)
@@ -50,9 +54,10 @@ Attribute Information:
  13. thal: 3 = normal; 6 = fixed defect; 7 = reversable defect
 
 
-### Solution Approach TODO
-1. Classification problem
-2. 
+### Solution Approach
+1. Supervised Classification
+2. Apply 4 models- Logistic Regression, Decision Tree, Artificial Neural Network, Gradient Boosting
+3. Since prediction of target variable is a probability, use the models to figure out the probability threshold to delineate between no heart disease versus presence of heart disease 
 
 
 ```{r installpackages}
@@ -85,6 +90,21 @@ raw <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
 
 # Data Understanding
 
+
+### Sample rows
+
+```{r}
+
+head(raw, 5)
+
+```
+
+### Statistical summary of dataset
+
+```{r}
+summary(raw)
+```
+
 ### Summary of overall raw dataset
 1. 55% of subjects have heart disease
 2. 68% are males 
@@ -92,9 +112,6 @@ raw <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
 4. 75% females have heart disease
 
 ```{r}
-head(raw, 5)
-summary(raw)
-
 #dim(raw)
 prop.table(table(raw$target))
 prop.table(table(raw$sex))
@@ -108,14 +125,7 @@ prop.table(table(females$target))
 
 ### Summary of missing data
 
-There are 64% values in the data set with no missing values. There are 15% missing values in age, 10% in fbs, 10% in slope, and 9% in cp.
-
-```{r}
-
-# TODO show percentage of missing value as well
-md.pattern(raw)
-
-```
+There are 64% values in the data set with no missing values. There are 11% missing values in age, 6% in fbs, 5% in slope, and 5% in cp.
 
 
 ```{r}
@@ -129,38 +139,43 @@ md.pattern(raw)
 
 
 
-### Data Imputation before data exploration 
+### Data Imputation
 
-Missing data is imputed using predictive mean matching with Mice
+**Missing data is imputed using predictive mean matching with Mice. **
+Predictive Mean Matching (PMM) is a semi-parametric imputation approach. It is similar to the regression method except that for each missing value, it fills in a value randomly from among the a observed donor values from an observation whose regression-predicted values are closest to the regression-predicted value for the missing value from the simulated regression model (Heitjan and Little 1991; Schenker and Taylor 1996).
+The PMM method ensures that imputed values are plausible; it might be more appropriate than the regression method (which assumes a joint multivariate normal distribution) if the normality assumption is violated (Horton and Lipsitz 2001, p. 246).
 
 ```{r include=FALSE}
 
 # Impute missing values
-# m  – Refers to 5 imputed data sets
+# m  – Refers to number of imputations. Typically 5 is used. New rule of thumb to use whatever the average percentage rate of missingness is - so if there is 30% missing data on average in a dataset, use 30 imputations - see Bodner (2008) and White et al (2011) for further details.
 # maxit – Refers to no. of iterations taken to impute missing values
 # method – Refers to method used in imputation. we used predictive mean matching.
 
-#TODO why did we choose 10 iterations
 
 imputed <- mice(raw, m=5, maxit = 10, method = 'pmm', seed = 500)
 #imputed
 #summary(imputed)
 ```
 
-**Visualize dataset after imputation**
+**Missing data after imputation**.
+
+Dataset is now complete as shown below.
+
 
 ```{r}
 
 # combine data back into main dataset
 heart<-complete(imputed)
 
+# Save dataset heart for shiny app.
 save(heart, file = "./HeartDiseaseCleveland/heart.RData")
 #summary(heart)
 
  mice_plot <- aggr(heart, col=c('navyblue','yellow'),
                     numbers=TRUE, sortVars=TRUE,
                     labels=names(heart), cex.axis=.7,
-                    gap=3, ylab=c("Missing data","Pattern"))
+                    gap=3, ylab=c("Missing data","Pattern"),main="Missing Data View after Imputation")
 
 
 ```
@@ -172,7 +187,7 @@ save(heart, file = "./HeartDiseaseCleveland/heart.RData")
 
 **Correlation Matrix**
 
-Visualize with a correlation matrix how features are correlated with each other and with the target variable. No two features have a strong correlation (<50%). Target variable seems to be somewhat driven by cp,thalach,exang,oldpeak
+Visualize with a correlation matrix how features are correlated with each other and with the target variable. **No two features have a strong correlation (<50%).**
 
 ```{r}
 #corr of data
@@ -184,11 +199,11 @@ corrplot(corrmatrix, method = 'number', type="upper")
 
 **Pairwise Correlations**
 
-Inferences after imputation and cleanup of data-
+1. **Gender**
 
-* Heart disease is more prevalent in females than males
-   + 45% males have heart disease
-   + 75% females have heart disease
+* **Heart disease is more prevalent in females than males**
+* **45% males have heart disease**
+* **75% females have heart disease**
 
 ```{r echo=FALSE}
 
@@ -204,21 +219,27 @@ ggplot(heart, aes(x=sex, fill=as.factor(target))) +
 
 ```
 
-2. Age is not cleanly correlated with a higher chance of heart disease, although it is apparent that heart disease increases with age over 60
+2. **Age**
+
+**Rate of heart disease increases with age over 60**
 
 ```{r echo=FALSE}
 ggplot(data=heart, aes(age, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Age") + theme_bw()
 ```
 
 
-3. Higher cholesterol increases with cholesterol. We don't know if this is good (HDL) or bad (LDL) cholesterol or total cholesterol
+3. **Cholesterol**
+
+**Higher cholesterol increases rate of heart disease.** We don't know if this is good (HDL) or bad (LDL) cholesterol or total cholesterol
 
 ```{r echo=FALSE}
 ggplot(data=heart, aes(chol, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Serum cholestoral in mg/dl") + theme_bw()
 ```
 
 
-4. Of those subjects with fasting blood sugar > 120 mg/dl, majority have higher risk of heart disease 
+4. **Fasting Blood Sugar**
+
+**Of those subjects with fasting blood sugar > 120 mg/dl, majority have higher risk of heart disease **
 
 ```{r echo=FALSE}
 
@@ -229,7 +250,9 @@ ggplot(heart, aes(x=fbs, fill=as.factor(target))) +
 
 ```
 
-5. Subjects with higher resting heart rate have a higher prevalence of heart disease 
+5. **Resting ECG results**
+
+**Subjects with higher resting ECG have a higher prevalence of heart disease** 
 
 ```{r echo=FALSE}
 
@@ -247,8 +270,10 @@ ggplot(heart, aes(x=restecg, fill=as.factor(target))) +
 
 ### Visualization of scale and outliers
 
-Visualize data to see spread, pattern of outliers and scaling needs. We use the Rosner Tests to identify outlier. 
-Outcomes are:
+We use the Rosner Tests to identify outlier. 
+
+**Outcomes are:**
+
 1. Needs scaling
 2. Four columns have outliers - resting BP (trestbps), Cholesterol (chol), Stress Test depression (oldpeak), Defects (thal)
 
@@ -257,8 +282,8 @@ Outcomes are:
 #Melt data
 melt_data = melt(heart, id.vars=c("X"))
 #visualize spread of data
-ggplot(melt_data,  mapping = aes(x = value)) + geom_bar(fill = "#FF6666") + facet_wrap(~variable, scales = 'free_x')
-boxplot(heart)
+ggplot(melt_data,  mapping = aes(x = value)) + geom_bar(fill = "#FF6666") + facet_wrap(~variable, scales = 'free_x') + ggtitle("Distribution of variables")
+boxplot(heart,main="Outliers and Scaling of Variables")
 ```
 
 ```{r}
@@ -297,7 +322,7 @@ rosnerTest(heart$thal, k = 4, warn = F)
 
 ### Standardize data and outlier handling/processing
 1. Replaced outliers with 5th and 95th percentile values
-2. Scale data
+2. Scaled data
 
 ```{r}
 #replace outliers with 5th and 95th percentile values
@@ -333,26 +358,35 @@ data$oldpeak <- scaled$oldpeak
 
 ```
 
-### Visualize prepared data
+**Visualize prepared data**
+
 * Data is now scaled
 * Outliers have been replaced/processed
 
-
 ```{r}
 
-boxplot(data)
+boxplot(data,main="Standardized variables with No Outliers")
 
 ```
 
 
 
 ### PCA and Reduction of features
-Let's attempt to reduce dimensionality of dataset with Principal Component Analysis (PCA)
-We use two methods, princomp and prcomp for PCA. Both show that first 7-10 features give us 80%-90% of the variance, and that no one variable is overbearing.**Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA** 
 
+Let's attempt to reduce dimensionality of dataset with Principal Component Analysis (PCA).
+
+We use two methods:
+1. Spectral decomposition which examines the covariances / correlations between variables (princomp)
+2. Singular value decomposition which examines the covariances / correlations between individuals (prcomp)
+While both methods can easily be performed within R, the singular value decomposition method (i.e., Q-mode) is the preferred analysis for numerical accuracy (R Development Core Team 2011).
+
+* **Both show that first 7-12 features give us 80%-90% of the variance, and that no one variable is overbearing.**
+* **Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA** 
+
+
+* **PRINCOMP: Notice that first 7 components represent 85% of the variance**
 
 ```{r}
-# TODO  understand difference between 2 methods of PCA
 
 # ##### Build pca using princomp
 data_pca1 <- princomp(data)
@@ -360,35 +394,43 @@ data_pca1 <- princomp(data)
 summary(data_pca1)
 # inspect principal components
 # loadings shows variance and and how much each variable contributes to each components
-loadings(data_pca1)
-fviz_pca_var(data_pca1,
-             col.var = "contrib", # Color by contributions to the PC
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE     # Avoid text overlapping
-             )
+#loadings(data_pca1)
+#fviz_pca_var(data_pca1,
+#             col.var = "contrib", # Color by contributions to the PC
+#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#             repel = TRUE     # Avoid text overlapping
+#             )
+
 ```
 
 
+**PRCOMP: Notice that first 12 components represent 86% of the variance**
+
 ```{r}
+
 # ###### using princomp first 7 give us 85% of the variance
 # ##### build pca using prcomp
 data_pca2 <- prcomp(data)
 summary(data_pca2)
 #above shows first 6 account for 88% variance
 #plot
-plot(data_pca2)
+#plot(data_pca2)
 # scree plot
-plot(data_pca2, type = "lines")
+#plot(data_pca2, type = "lines")
 
-fviz_pca_var(data_pca2,
-             col.var = "contrib", # Color by contributions
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE     # Avoid text overlapping
-             )
+#fviz_pca_var(data_pca2,
+#             col.var = "contrib", # Color by contributions
+#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#             repel = TRUE     # Avoid text overlapping
+#             )
+
 ```
 
 
-### Partition dataset into training (229 subjects, 75%) and test(25%) datasets
+
+### Partition dataset
+1. Training - 75%, 229 subjects
+2. Testing - 25%, 74 subjects
 
 ```{r}
 library(caret)
@@ -396,12 +438,12 @@ set.seed(3456)
 trainingIndex = createDataPartition(data$age, p = 0.75, list=FALSE)
 trainData = data[trainingIndex,]
 testData = data[-trainingIndex,]
-#TODO
-nrow(trainData)
+
+#Save train data for shiny app
+save(trainData, file = "./HeartDiseaseCleveland/trainData.RData")
+
 
 ```
-
-
 
 
 # Modeling 
@@ -409,20 +451,51 @@ nrow(trainData)
 
 ### Logistic Regression Model
 
-**Run the model against training data using the Binomial algo**
+1. **Overview**
+Logistic Regression is used when the dependent variable(target) is categorical, as in this case.
 
-LR Modeling demonstrates that following variables are predictors of target variable - sex,cp, restecg, exang, oldpeak, ca. 
-To evaluate and refine the model we take the following steps- 
-* Compute average prediction for true outcomes
-   + **TP are 78%, that is predicting presence of heart disease correctly 78% of the time**
-   + **TN are 26%, that is predicting no heart disease when there is none 26% of the time**
-   + 78% is not bad, it can be improved
+Types of Logistic Regressio
+-Binary Logistic Regression
+The categorical response has only two 2 possible outcomes. Example: Spam or Not
+-Multinomial Logistic Regression
+Three or more categories without ordering. Example: Predicting which food is preferred more (Veg, Non-Veg, Vegan)
+-Ordinal Logistic Regression
+Three or more categories with ordering. Example: Movie rating from 1 to 5
+
+**p value** is an important evaluation metric.p-value helps you to decide whether there is a relationship between two variables or not.
+
+The smaller the p-value this mean the more confident you are about the existence of relationship between the two variables. The origins of p-values comes form hypothesis testing in statistics. In hypothesis testing, you have two hypothesis:
+H0 (called the null hypothesis ) : There is no relationship between the two variables.
+H1 (called the alternative hypothesis): There exist a relationship between the two variables.
+
+If the p-value is less than small threshold (often 0.05 is used), then you can reject the null hypothesis H0, which means that you decide that there is a relationship between the two variables.
+
+
+2. **Run the model against training data using the Binomial algo**
+
+Looking at the p values the **following variables are predictors of target variable**
+
+* Gender(sex)
+* Type of Chest Pain (cp)
+* Resting ECG result (restecg)
+* Exercise induced Angina (exang)
+* Stress Test depression (oldpeak)
+* Number of colored veins (ca)
+
+
+3. **Evaluate and refine the model** - 
+
+   **Compute average prediction for true outcomes**
+   **TP are 78%, that is predicting presence of heart disease correctly 78% of the time**
+   **TN are 26%, that is predicting no heart disease when there is none 26% of the time**
 
 
 ```{r}
-#TODO understand P value
-
 lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
+
+#Save model for shiny app
+saveRDS(lr.fit, "./HeartDiseaseCleveland/logisticRegression.rds")
+
 ###Shows that the following variables are predictors of target variable
 ###sex,cp, restecg, exang, oldpeak, ca
 summary(lr.fit)
@@ -437,7 +510,7 @@ tapply(lr.prob,trainData$target,mean)
 ```
 
 
-**Find the threshold probability to delineate between heart disease= 0 or 1**
+4. **Find the threshold probability to delineate between heart disease= 0 or 1**
 
 * ROC curve will help find the threshold
    + We want high TRUE POSITIVES or Sensitivity for diagnosing heart disease, and are ok with higher false positive 
@@ -460,7 +533,10 @@ plot(lr.perf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1
 
 ```
 
-**Evaluate model by predicting on test dataset and generating the ROC curve**
+5. **Evaluate model by predicting on test dataset and generating the ROC curve**
+
+* With 0.5 as threshold, **prediction on test dataset leads to accuracy of 89%**
+
 The accuracy of the test depends on how well the test separates the group being tested into those with and without the disease in question. Accuracy is measured by the area under the ROC curve. An area of 1 represents a perfect test; an area of .5 represents a worthless test. A rough guide for classifying the accuracy of a diagnostic test is the traditional academic point system:
 
 .90-1 = excellent (A)
@@ -469,12 +545,9 @@ The accuracy of the test depends on how well the test separates the group being 
 .60-.70 = poor (D)
 .50-.60 = fail (F)
 
-* With 0.5 as threshold, **prediction on test dataset leads to accuracy = 89%**
-* Plot the logistic regression model against predictor variables
 
 
 ```{r}
-
 #with 0.5 as threshold, lets predict on test dataset
 lrtest.prob=predict(lr.fit,type="response", newdata=testData)
 #generate confusion matrix 
@@ -487,25 +560,110 @@ sensitivity = (35/(35+4))*100
 # ROC curve validates that sensitivity is 89.6% 
 auc.lr = roc(testData$target, lrtest.prob, plot = TRUE, col = "blue")
 auc.lr
+```
 
+6. **Plot the logistic regression model against predictor variables**
+   * Gender(sex)
+   * Type of Chest Pain (cp)
+   * Resting Heart Rate (restecg)
+   * Exercise induced Angina (exang)
+   * Stress Test depression (oldpeak)
+   * Number of colored vessels (ca)
 
-###plot the logistic regression model against predictor variables
-# After we have summarised our model, we will visualize it through the following plots
-#plot(allEffects(lr.fit))
+7. **Gender** versus Target variable
+
+* **Heart disease is more prevalent in females than males**
+
+```{r echo=FALSE}
+
+ggplot(data=data, aes(x=sex, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By Gender")
 
 ```
 
 
+8. **Type of Chest Pain** versus Target variable
+
+* **Heart disease is predicted by types 1,2 and 3 of chest pain**
+
+```{r echo=FALSE}
+
+ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By Type of Chest Pain")
+
+```
+
+9. **Resting ECG result** versus Target variable
+
+**Higher ECG result predics heart disease** 
+
+```{r echo=FALSE}
+ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By ECG result")
+```
+
+
+10. **Exercise Induced Angina** versus Target variable
+
+**Higher exercise induced angina predicts heart disease** 
+
+```{r echo=FALSE}
+ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By exercise induced angina")
+```
+
+
+10. **Stress Test Depression** versus Target variable
+
+**Lower depression during stress test predicts heart disease** 
+
+```{r echo=FALSE}
+ggplot(data=data, aes(oldpeak, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Stress Test Depression") + theme_bw()
+```
+
+
+
+11. **Number of Colored Vessels** versus Target variable
+
+* **Heart disease is predicted by lower number of colored vessels**
+
+```{r echo=FALSE}
+
+ggplot(data=data, aes(x=ca, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By Number of Colored Vessels")
+
+```
+
+
+
+
 ### Decision Tree algorithm
 
-**ROC curve shows accuracy of this model is 77%**
+1. **Overview**
+A decision tree is a flowchart-like tree structure where an internal node represents feature(or attribute), the branch represents a decision rule, and each leaf node represents the outcome. The topmost node in a decision tree is known as the root node. It learns to partition on the basis of the attribute value. It partitions the tree in recursively manner call recursive partitioning. This flowchart-like structure helps you in decision making. It's visualization like a flowchart diagram which easily mimics the human level thinking. That is why decision trees are easy to understand and interpret.
 
+
+2. **Run the model against training data, predict target on test data**
 
 ```{r}
 dt.fit <- rpart(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, trainData,method = 'class')
 dt.predict <- predict(dt.fit, testData, type = 'class')
 dt.probability <- predict(dt.fit, testData, type = 'prob')
+# save model for shiny app
+saveRDS(dt.fit, "./HeartDiseaseCleveland/decisionTree.rds")
+```
 
+3. **Evaluate the model** - 
+
+**ROC curve shows accuracy of this model is 82%**
+
+
+```{r}
 rpart.plot(dt.fit)
 rpart.plot(dt.fit)
 # In order to assess the performance of our model, we will delineate the ROC curve. ROC is also known as Receiver Optimistic Characteristics
@@ -519,28 +677,45 @@ auc.dt
 
 
 ### Artificial Neural Networks (ANN) Model
+1. **Overview**
 
-ROC curve shows accuracy of this model is 78%
 
+2. **Run the model against training data, predict target on test data**
 
 ```{r}
 ann.fit =neuralnet(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca,trainData,linear.output=FALSE)
+
+# Save model for shiny app
+saveRDS(ann.fit, "./HeartDiseaseCleveland/artificialNeuralNetwork.rds")
+
 plot(ann.fit)
 ann.predict=neuralnet::compute(ann.fit,testData)
 annResult=ann.predict$net.result
 #since predicted variable is probabilty and continous, convert to  0 or 1 factor
 annResult=ifelse(annResult>0.5,1,0)
+```
+
+3. **Evaluate the model** - 
+
+**ROC curve shows accuracy of this model is 82%**
+
+```{r}
 auc.ann = roc(testData$target, factor(annResult, ordered = TRUE), plot = TRUE, col = "blue")
 auc.ann
+
 ```
 
 
 
 ### Gradient Boosting Model
 
-This uses ensemble models like weak decision trees. These decision trees combine together to form a strong model of gradient boosting
+1. **Overview**
+This uses ensemble models like weak decision trees. These decision trees combine together to form a strong model of gradient boosting.
 
-**ROC curve shows accuracy of this model is 86%**
+Gradient Boosting Machine (for Regression and Classification) is a forward learning ensemble method. The guiding heuristic is that good predictive results can be obtained through increasingly refined approximations. H2O’s GBM sequentially builds regression trees on all the features of the dataset in a fully distributed way - each tree is built in parallel.
+
+
+2. **Run the model against training data, predict target on test data**
 
 ```{r include=FALSE}
 system.time(
@@ -555,17 +730,25 @@ gbm.fit <- gbm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpea
 , train.fraction = nrow(trainData) / (nrow(trainData) + nrow(testData))
 )
 )
+# Save model for shin app
+saveRDS(gbm.fit, "./HeartDiseaseCleveland/gradientBoosting.rds")
+
 # Determine best iteration based on test data
 gbm.iter = gbm.perf(gbm.fit, method = "test")
 model.influence = relative.influence(gbm.fit, n.trees = gbm.iter, sort. = TRUE)
-```
 
-
-```{r}
 #Plot the gbm model
 plot(gbm.fit)
 # Plot and calculate AUC on test data
 gbm.test = predict(gbm.fit, newdata = testData, n.trees = gbm.iter)
+
+```
+
+3. **Evaluate the model** - 
+
+**ROC curve shows accuracy of this model is 86%**
+
+```{r}
 auc.gbm = roc(testData$target, gbm.test, plot = TRUE, col = "red")
 print(auc.gbm)
 auc.gbm
