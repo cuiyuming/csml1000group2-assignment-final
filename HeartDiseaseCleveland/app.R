@@ -11,6 +11,7 @@ library(shiny)
 library(ggplot2)
 library(EnvStats)
 library(nnet)
+library(factoextra)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -40,22 +41,25 @@ ui <- fluidPage(
        
         mainPanel(
             tabsetPanel(type = "tabs",
-                        tabPanel("Visual Output",  
+                        tabPanel("Corralation Plot",  
                                  fluidRow(
                                     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_age"), plotOutput("plot_cp")),
                                     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_trestbps"), plotOutput("plot_chol"))
                                 )
                         ),
-                        tabPanel("Supervised Models",  
+                        tabPanel("UnSupervised Plot",  
                                  fluidRow(
-                                   splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_lr"), plotOutput("plot_model_dt")),
-                                   splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_ann"), plotOutput("plot_model_gb"))
+                                   splitLayout(cellWidths = c("50%", "80%"), plotOutput("plot_princomp"), plotOutput("plot_prcomp"))
+                              
                                  )
                         ),
-                        # fluidRow(
-                        #     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_lr"), plotOutput("plot_model_dt")),
-                        #     splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_ann"), plotOutput("plot_model_gb"))
-                        # )
+                        tabPanel("Supervised Plot",  
+                                 fluidRow(
+                                   splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_lr"), plotOutput("plot_model_dt")),
+                                   splitLayout(cellWidths = c("50%", "80%"), plotOutput("plot_model_ann"), plotOutput("plot_model_gb"))
+                                 )
+                        ),
+                        
                         tabPanel("Data", tableOutput("table"))
             )
         )
@@ -64,19 +68,22 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
-   load("heart.RData")
- load("trainData.RData")
+  load("heart.RData")
+  load("trainData.RData")
+  load("scaled.Rdata")
     
-    lr_model <- readRDS("./logisticRegression.rds")
-    dt_model <- readRDS("./decisionTree.rds")
-    ann_model <- readRDS("./artificialNeuralNetwork.rds")
-    gb_model <- readRDS("./gradientBoosting.rds")
-    lr.prob <- predict(lr_model, type="response")
-    lr.predict <- prediction(lr.prob, trainData$target)
-    lr.perf <- performance(lr.predict, "tpr", "fpr")
-    
+  lr_model <- readRDS("./logisticRegression.rds")
+  dt_model <- readRDS("./decisionTree.rds")
+  ann_model <- readRDS("./artificialNeuralNetwork.rds")
+  gb_model <- readRDS("./gradientBoosting.rds")
+  lr.prob <- predict(lr_model, type="response")
+  lr.predict <- prediction(lr.prob, trainData$target)
+  lr.perf <- performance(lr.predict, "tpr", "fpr")
   
+  pca.princomp <- princomp(data)
+  pca.prcomp <- prcomp(data)
+    
+
 
     r <- reactive({
          age <- input$age
@@ -129,6 +136,24 @@ server <- function(input, output) {
     
     output$plot_model_gb <- renderPlot({
       plot(gb_model, colorize=TRUE, main="Gradient Boosting Model")
+    })
+    
+    output$plot_princomp <- renderPlot({
+      fviz_pca_var(pca.princomp,
+                   col.var = "contrib",
+                   gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                   repel = TRUE,
+                   title = "Princomp PCA"
+      )
+    })
+    
+    output$plot_prcomp <- renderPlot({
+      fviz_pca_var( pca.prcomp,
+                   col.var = "contrib",
+                   gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                   repel = TRUE,
+                   title = "Prcom PCA"    
+      )
     })
    
     output$table <- renderTable({
