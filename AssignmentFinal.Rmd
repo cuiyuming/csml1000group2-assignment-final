@@ -10,8 +10,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE,echo=FALSE,warning=FALSE,message=FALSE)
 ```
 
-image: ![](./images/heartdisease.jpg) 
-# Modeling Risk of Heart Disease on Patients in Cleveland, OH, USA using CRISP-DM
+image: ![](./images/heartdisease.jpg)
+
+
+# CRISP-DM Modeling Heart Disease on Subjects in Cleveland, OH, USA
+
 Kaggle Repository for this dataset is located at [link](https://www.kaggle.com/ronitf/heart-disease-uci) 
 
 
