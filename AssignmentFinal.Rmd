@@ -1,13 +1,13 @@
 ---
 title: "CSML1000-003-O-F19 - Group 2 - Assignment Final"
 author: "Rajiv Kaushik, Yuming Cui, Madana Bolla, Pratik Chandwani, Konstantin Krassavine"
-date: "111/15/2019"
+date: "11/15/2019"
 output: html_document
 ---
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,echo=FALSE,warning=FALSE,message=FALSE)
+knitr::opts_chunk$set(echo=FALSE,warning=FALSE,message=FALSE,include=TRUE)
 ```
 
 image: ![](./images/heartdisease.jpg)
@@ -15,23 +15,24 @@ image: ![](./images/heartdisease.jpg)
 
 # CRISP-DM Modeling Heart Disease on Subjects in Cleveland, OH, USA
 
-Kaggle Repository for this dataset is located at [link](https://www.kaggle.com/ronitf/heart-disease-uci) 
+Kaggle Repository for this dataset is located at [here](https://www.kaggle.com/ronitf/heart-disease-uci) 
 
 
 # Business Understanding
 
-## Problem Statement
+
+### Problem Statement
 
 Predict heart disease in a patient from Cleveland Medical Center, OH, USA. Since this analysis and modeling covers risk to human life, it is important to maintain a high rate of identifying patients with heart disease (i.e True Positives, therefore high sensitivity) while maintaining a realistic error rate for those who do not have heart disease ( False Positives, redicting heart disease in a patient when there is none) 
 
 
-## Context
+### Context
 
-This database contains data about the factors related to heart disease. There are 76 attributes from V.A. Medical Center, Long Beach and Cleveland Clinic Foundation. 
+This database contains data about the factors related to heart disease. There are 14 attributes from V.A. Medical Center, Long Beach and Cleveland Clinic Foundation. 
 The "target" field refers to the presence of heart disease in the patient. 0 represents "Not a significant risk of heart disease", 1 imlies "Significant risk of heart disease"  
 
 
-## Content
+### Content
 
 Attribute Information:
  1. age
@@ -48,7 +49,8 @@ Attribute Information:
  12. number of major vessels (0-3) colored by flourosopy
  13. thal: 3 = normal; 6 = fixed defect; 7 = reversable defect
 
-## Solution Approach TODO
+
+### Solution Approach TODO
 1. Classification problem
 2. 
 
@@ -80,9 +82,10 @@ library(dplyr)
 raw <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
 ```
 
+
 # Data Understanding
 
-## Summary of overall raw dataset
+### Summary of overall raw dataset
 1. 55% of subjects have heart disease
 2. 68% are males 
 3. 44% males have heart disease
@@ -102,7 +105,8 @@ prop.table(table(females$target))
 
 ```
 
-## Summary of missing data
+
+### Summary of missing data
 
 There are 64% values in the data set with no missing values. There are 15% missing values in age, 10% in fbs, 10% in slope, and 9% in cp.
 
@@ -125,33 +129,47 @@ md.pattern(raw)
 
 
 
-## Data Imputation before data exploration 
-Missing data is imputed using predictive mean matching with Mice. Let's sample imputed age and chest pain scale(cp)
+### Data Imputation before data exploration 
 
-```{r}
+Missing data is imputed using predictive mean matching with Mice
+
+```{r include=FALSE}
 
 # Impute missing values
 # m  – Refers to 5 imputed data sets
 # maxit – Refers to no. of iterations taken to impute missing values
 # method – Refers to method used in imputation. we used predictive mean matching.
 
+#TODO why did we choose 10 iterations
+
 imputed <- mice(raw, m=5, maxit = 10, method = 'pmm', seed = 500)
-imputed
+#imputed
 #summary(imputed)
 ```
 
+**Visualize dataset after imputation**
 
 ```{r}
+
 # combine data back into main dataset
 heart<-complete(imputed)
 #summary(heart)
-#md.pattern(heart)
+
+ mice_plot <- aggr(heart, col=c('navyblue','yellow'),
+                    numbers=TRUE, sortVars=TRUE,
+                    labels=names(heart), cex.axis=.7,
+                    gap=3, ylab=c("Missing data","Pattern"))
+
 
 ```
 
-## Data exploration
 
-### Correlation Matrix
+
+### Data Exploration
+
+
+**Correlation Matrix**
+
 Visualize with a correlation matrix how features are correlated with each other and with the target variable. No two features have a strong correlation (<50%). Target variable seems to be somewhat driven by cp,thalach,exang,oldpeak
 
 ```{r}
@@ -162,7 +180,8 @@ corrplot(corrmatrix, method = 'number', type="upper")
 
 
 
-### Pairwise Correlations
+**Pairwise Correlations**
+
 Inferences after imputation and cleanup of data-
 
 * Heart disease is more prevalent in females than males
@@ -219,9 +238,13 @@ ggplot(heart, aes(x=restecg, fill=as.factor(target))) +
 ```
 
 
+
+
 # Data Preparation
 
-## Visualization of scale and outliers
+
+### Visualization of scale and outliers
+
 Visualize data to see spread, pattern of outliers and scaling needs. We use the Rosner Tests to identify outlier. 
 Outcomes are:
 1. Needs scaling
@@ -242,7 +265,7 @@ heart<- heart[-c(1)]
 ```
 
 
-```{r}
+```{r include=FALSE}
 ## Checking outlier
 #3 outlier
 rosnerTest(heart$age, k = 4, warn = F)
@@ -270,7 +293,7 @@ rosnerTest(heart$ca, k = 4, warn = F)
 rosnerTest(heart$thal, k = 4, warn = F)
 ```
 
-## Standardize data and outlier handling/processing
+### Standardize data and outlier handling/processing
 1. Replaced outliers with 5th and 95th percentile values
 2. Scale data
 
@@ -308,7 +331,7 @@ data$oldpeak <- scaled$oldpeak
 
 ```
 
-## Visualize prepared data
+### Visualize prepared data
 * Data is now scaled
 * Outliers have been replaced/processed
 
@@ -321,12 +344,14 @@ boxplot(data)
 
 
 
-## PCA and Reduction of features
+### PCA and Reduction of features
 Let's attempt to reduce dimensionality of dataset with Principal Component Analysis (PCA)
-We use two methods, princomp and prcomp for PCA. Both show that first 7-10 features give us 80%-90% of the variance, and that no one variable is overbearing.Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA.  
+We use two methods, princomp and prcomp for PCA. Both show that first 7-10 features give us 80%-90% of the variance, and that no one variable is overbearing.**Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA** 
 
 
 ```{r}
+# TODO  understand difference between 2 methods of PCA
+
 # ##### Build pca using princomp
 data_pca1 <- princomp(data)
 #examine the importance of PCs
@@ -360,7 +385,8 @@ fviz_pca_var(data_pca2,
              )
 ```
 
-## Partition dataset into training (229 subjects, 75%) and test(25%) datasets
+
+### Partition dataset into training (229 subjects, 75%) and test(25%) datasets
 
 ```{r}
 library(caret)
@@ -374,21 +400,26 @@ nrow(trainData)
 ```
 
 
+
+
 # Modeling 
 
-## Logistic Regression Model
 
-### Run the model against training data using the Binomial algo
+### Logistic Regression Model
+
+**Run the model against training data using the Binomial algo**
 
 LR Modeling demonstrates that following variables are predictors of target variable - sex,cp, restecg, exang, oldpeak, ca. 
 To evaluate and refine the model we take the following steps- 
 * Compute average prediction for true outcomes
-   + TP are 78%, that is predicting presence of heart disease correctly 78% of the time 
-   + TN are 26%, that is predicting no heart disease when there is none 26% of the time
+   + **TP are 78%, that is predicting presence of heart disease correctly 78% of the time**
+   + **TN are 26%, that is predicting no heart disease when there is none 26% of the time**
    + 78% is not bad, it can be improved
 
 
 ```{r}
+#TODO understand P value
+
 lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
 ###Shows that the following variables are predictors of target variable
 ###sex,cp, restecg, exang, oldpeak, ca
@@ -403,12 +434,13 @@ tapply(lr.prob,trainData$target,mean)
 
 ```
 
-### Find the threshold probability to delineate between heart disease= 0 or 1
+
+**Find the threshold probability to delineate between heart disease= 0 or 1**
 
 * ROC curve will help find the threshold
    + We want high TRUE POSITIVES or Sensitivity for diagnosing heart disease, and are ok with higher false positive 
    + Therefore the threshold is at (0.9,0.2) where 90% with heart disease are diagnosed correctly
-   + At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease 
+   + **At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease **
 
 ```{r}
 
@@ -418,18 +450,15 @@ tapply(lr.prob,trainData$target,mean)
 lr.predict = prediction(lr.prob, trainData$target)
 lr.perf = performance(lr.predict, "tpr", "fpr")
 # Plot ROC curve
-plot(lr.perf)
-# Add colors
-plot(lr.perf, colorize=TRUE)
 # Add threshold labels 
-plot(lr.perf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+plot(lr.perf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7),main="ROC for Logistic Regression Model")
 #We want high TRUE POSITIVES or Sensitivity for diagnosing heart disease, and are ok with higher false positive 
 #Therefore the threshold is at (0.9,0.2) where 90% with heart disease are diagnosed correctly
 #At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease 
 
 ```
 
-### Evaluate model by predicting on test dataset and generating the ROC curve
+**Evaluate model by predicting on test dataset and generating the ROC curve**
 The accuracy of the test depends on how well the test separates the group being tested into those with and without the disease in question. Accuracy is measured by the area under the ROC curve. An area of 1 represents a perfect test; an area of .5 represents a worthless test. A rough guide for classifying the accuracy of a diagnostic test is the traditional academic point system:
 
 .90-1 = excellent (A)
@@ -438,7 +467,7 @@ The accuracy of the test depends on how well the test separates the group being 
 .60-.70 = poor (D)
 .50-.60 = fail (F)
 
-* With 0.5 as threshold, prediction on test dataset leads to accuracy = 89%
+* With 0.5 as threshold, **prediction on test dataset leads to accuracy = 89%**
 * Plot the logistic regression model against predictor variables
 
 
@@ -465,9 +494,9 @@ auc.lr
 ```
 
 
-## Decision Tree algorithm
+### Decision Tree algorithm
 
-ROC curve shows accuracy of this model is 77%
+**ROC curve shows accuracy of this model is 77%**
 
 
 ```{r}
@@ -485,7 +514,9 @@ auc.dt
 
 ```
 
-## Artificial Neural Networks (ANN) Model
+
+
+### Artificial Neural Networks (ANN) Model
 
 ROC curve shows accuracy of this model is 78%
 
@@ -501,12 +532,15 @@ auc.ann = roc(testData$target, factor(annResult, ordered = TRUE), plot = TRUE, c
 auc.ann
 ```
 
-## Gradient Boosting Model
+
+
+### Gradient Boosting Model
+
 This uses ensemble models like weak decision trees. These decision trees combine together to form a strong model of gradient boosting
 
-ROC curve shows accuracy of this model is 86%
+**ROC curve shows accuracy of this model is 86%**
 
-```{r}
+```{r include=FALSE}
 system.time(
 gbm.fit <- gbm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca
 , distribution = "bernoulli"
@@ -522,6 +556,10 @@ gbm.fit <- gbm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpea
 # Determine best iteration based on test data
 gbm.iter = gbm.perf(gbm.fit, method = "test")
 model.influence = relative.influence(gbm.fit, n.trees = gbm.iter, sort. = TRUE)
+```
+
+
+```{r}
 #Plot the gbm model
 plot(gbm.fit)
 # Plot and calculate AUC on test data
