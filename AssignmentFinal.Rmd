@@ -1,40 +1,56 @@
 ---
 title: "CSML1000-003-O-F19 - Group 2 - Assignment Final"
 author: "Rajiv Kaushik, Yuming Cui, Madana Bolla, Pratik Chandwani, Konstantin Krassavine"
-date: "09/11/2019"
+date: "111/15/2019"
 output: html_document
 ---
 
-# Data Description
 
-##Context
-This database contains 76 attributes, but all published experiments refer to using a subset of 14 of them. In particular, the Cleveland database is the only one that has been used by ML researchers to this date. The "goal" field refers to the presence of heart disease in the patient. It is integer valued from 0 (no presence) to 4.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,echo=FALSE,warning=FALSE,message=FALSE)
+```
 
-##Content
+image: ![](./images/heartdisease.jpg) 
+# Modeling Risk of Heart Disease on Patients in Cleveland, OH, USA using CRISP-DM
+Kaggle Repository for this dataset is located at [link](https://www.kaggle.com/ronitf/heart-disease-uci) 
+
+
+# Business Understanding
+
+## Problem Statement
+
+Predict heart disease in a patient from Cleveland Medical Center, OH, USA. Since this analysis and modeling covers risk to human life, it is important to maintain a high rate of identifying patients with heart disease (i.e True Positives, therefore high sensitivity) while maintaining a realistic error rate for those who do not have heart disease ( False Positives, redicting heart disease in a patient when there is none) 
+
+
+## Context
+
+This database contains data about the factors related to heart disease. There are 76 attributes from V.A. Medical Center, Long Beach and Cleveland Clinic Foundation. 
+The "target" field refers to the presence of heart disease in the patient. 0 represents "Not a significant risk of heart disease", 1 imlies "Significant risk of heart disease"  
+
+
+## Content
 
 Attribute Information:
-> 1. age
-> 2. sex
-> 3. chest pain type (4 values)
-> 4. resting blood pressure
-> 5. serum cholestoral in mg/dl
-> 6. fasting blood sugar > 120 mg/dl
-> 7. resting electrocardiographic results (values 0,1,2)
-> 8. maximum heart rate achieved
-> 9. exercise induced angina
-> 10. oldpeak = ST depression induced by exercise relative to rest
-> 11. the slope of the peak exercise ST segment
-> 12. number of major vessels (0-3) colored by flourosopy
-> 13. thal: 3 = normal; 6 = fixed defect; 7 = reversable defect
-The names and social security numbers of the patients were recently removed from the database, replaced with dummy values. One file has been "processed", that one containing the Cleveland database. All four unprocessed files also exist in this directory.
+ 1. age
+ 2. sex
+ 3. chest pain type (4 values)
+ 4. resting blood pressure
+ 5. serum cholestoral in mg/dl
+ 6. fasting blood sugar > 120 mg/dl
+ 7. resting electrocardiographic results (values 0,1,2)
+ 8. maximum heart rate achieved
+ 9. exercise induced angina
+ 10. oldpeak = ST depression induced by exercise relative to rest
+ 11. the slope of the peak exercise ST segment
+ 12. number of major vessels (0-3) colored by flourosopy
+ 13. thal: 3 = normal; 6 = fixed defect; 7 = reversable defect
+
+## Solution Approach TODO
+1. Classification problem
+2. 
 
 
-#Install packages
-```{r echo=FALSE message = FALSE}
-#install.packages("mice")
-#install.packages("VIM")
-#install.packages("Hmisc")
-#install.packages("knitr", dependencies = TRUE)
+```{r installpackages}
 library(Hmisc)
 library(caret)
 library(mice)
@@ -53,108 +69,207 @@ library(neuralnet)
 library(gbm)
 library(ROCR)
 library(effects)
+library(dplyr)
 ```
 
+```{r}
 ## Load dataset
-Read data
-```{r}
-#Read data
-heart <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
+raw <- read.csv('./data/heart-with-na.csv', header=TRUE, sep = ",")
 ```
 
-View summary of data
+# Data Understanding
+
+## Summary of overall raw dataset
+1. 55% of subjects have heart disease
+2. 68% are males 
+3. 44% males have heart disease
+4. 75% females have heart disease
+
 ```{r}
-head(heart, 5)
-summary(heart)
+head(raw, 5)
+summary(raw)
+
+#dim(raw)
+prop.table(table(raw$target))
+prop.table(table(raw$sex))
+males <- raw %>% filter(sex == 1)
+prop.table(table(males$target))
+females <- raw %>% filter(sex == 0)
+prop.table(table(females$target))
+
 ```
 
-## Data imputation preparation
-### View miss data pattern with md.pattern
+## Summary of missing data
+
+There are 64% values in the data set with no missing values. There are 15% missing values in age, 10% in fbs, 10% in slope, and 9% in cp.
+
 ```{r}
-md.pattern(heart)
+
+# TODO show percentage of missing value as well
+md.pattern(raw)
+
 ```
+
+
+```{r}
 ### View miss data pattern with VIM
-```{r}
- mice_plot <- aggr(heart, col=c('navyblue','yellow'),
+
+ mice_plot <- aggr(raw, col=c('navyblue','yellow'),
                     numbers=TRUE, sortVars=TRUE,
-                    labels=names(heart), cex.axis=.7,
+                    labels=names(raw), cex.axis=.7,
                     gap=3, ylab=c("Missing data","Pattern"))
 ```
-Let's quickly understand this, There are 64% values in the data set with no missing values. There are 15% missing values in age, 10% in fbs, 10% in slope, and 9% in cp.
 
-### Impute missing values
-m  – Refers to 5 imputed data sets
-maxit – Refers to no. of iterations taken to impute missing values
-method – Refers to method used in imputation. we used predictive mean matching.
-```{r message=FALSE, echo=FALSE,warning=FALSE}
-imputed_Data <- mice(heart, m=5, maxit = 10, method = 'pmm', seed = 500)
-imputed_Data
-```
 
-Check imputed age vlaues:
+
+## Data Imputation before data exploration 
+Missing data is imputed using predictive mean matching with Mice. Let's sample imputed age and chest pain scale(cp)
+
 ```{r}
-imputed_Data$imp$age
+
+# Impute missing values
+# m  – Refers to 5 imputed data sets
+# maxit – Refers to no. of iterations taken to impute missing values
+# method – Refers to method used in imputation. we used predictive mean matching.
+
+imputed <- mice(raw, m=5, maxit = 10, method = 'pmm', seed = 500)
+imputed
+#summary(imputed)
 ```
-Check imputed cp(chect pain scale) vlaues:
+
+
 ```{r}
-imputed_Data$imp$cp
+# combine data back into main dataset
+heart<-complete(imputed)
+#summary(heart)
+#md.pattern(heart)
+
 ```
 
-Merge the imputed values back to the dataset.
+## Data exploration
+
+### Correlation Matrix
+Visualize with a correlation matrix how features are correlated with each other and with the target variable. No two features have a strong correlation (<50%). Target variable seems to be somewhat driven by cp,thalach,exang,oldpeak
+
 ```{r}
-combineData<-complete(imputed_Data)
-summary(combineData)
+#corr of data
+corrmatrix <- cor(heart[,c(-1)])
+corrplot(corrmatrix, method = 'number', type="upper")
 ```
 
-Now combineData contains all the imputed values and non missing values.
 
-# summary(raw)
 
-## Visualizations
+### Pairwise Correlations
+Inferences after imputation and cleanup of data-
+
+* Heart disease is more prevalent in females than males
+   + 45% males have heart disease
+   + 75% females have heart disease
+
+```{r echo=FALSE}
+
+males <- heart %>% filter(sex == 1)
+prop.table(table(males$target))
+females <- heart %>% filter(sex == 0)
+prop.table(table(females$target))
+
+ggplot(heart, aes(x=sex, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By Gender")
+
+
+```
+
+2. Age is not cleanly correlated with a higher chance of heart disease, although it is apparent that heart disease increases with age over 60
+
+```{r echo=FALSE}
+ggplot(data=heart, aes(age, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Age") + theme_bw()
+```
+
+
+3. Higher cholesterol increases with cholesterol. We don't know if this is good (HDL) or bad (LDL) cholesterol or total cholesterol
+
+```{r echo=FALSE}
+ggplot(data=heart, aes(chol, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Serum cholestoral in mg/dl") + theme_bw()
+```
+
+
+4. Of those subjects with fasting blood sugar > 120 mg/dl, majority have higher risk of heart disease 
+
+```{r echo=FALSE}
+
+
+ggplot(heart, aes(x=fbs, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By Fasting Sugar above or below 120 mg/dl")
+
+```
+
+5. Subjects with higher resting heart rate have a higher prevalence of heart disease 
+
+```{r echo=FALSE}
+
+ggplot(heart, aes(x=restecg, fill=as.factor(target))) +
+  geom_bar() +
+   ggtitle("Target By levels of Resting Heart Rate")
+
+```
+
+
+# Data Preparation
+
+## Visualization of scale and outliers
+Visualize data to see spread, pattern of outliers and scaling needs. We use the Rosner Tests to identify outlier. 
+Outcomes are:
+1. Needs scaling
+2. Four columns have outliers - resting BP (trestbps), Cholesterol (chol), Stress Test depression (oldpeak), Defects (thal)
+
+
 ```{r}
 #Melt data
-melt_data = melt(combineData, id.vars=c("X"))
+melt_data = melt(heart, id.vars=c("X"))
 #visualize spread of data
 ggplot(melt_data,  mapping = aes(x = value)) + geom_bar(fill = "#FF6666") + facet_wrap(~variable, scales = 'free_x')
-boxplot(combineData[,-c(1)])
+boxplot(heart)
 ```
-Above shows data needs scaling and has outliers
 
-## Checking outlier
 ```{r}
-#3 outlier
-rosnerTest(combineData$age, k = 4, warn = F)
-#3 outlier
-rosnerTest(combineData$cp, k = 4, warn = F)
-#3 outlier
-rosnerTest(combineData$trestbps, k = 4, warn = F)
-#0 outliers
-rosnerTest(combineData$chol, k = 4, warn = F)
-#4 outliers
-rosnerTest(combineData$fbs, k = 4, warn = F)
-#4 outliers
-rosnerTest(combineData$restecg, k = 4, warn = F)
-#4 outliers
-rosnerTest(combineData$thalach, k = 4, warn = F)
-#4 outliers
-rosnerTest(combineData$exang, k = 4, warn = F)
-#4 outliers
-rosnerTest(combineData$oldpeak, k = 4, warn = F)
-#4 outliers
-rosnerTest(combineData$slope, k = 4, warn = F)
-#0 outliers
-rosnerTest(combineData$ca, k = 4, warn = F)
-#2 outliers
-rosnerTest(combineData$thal, k = 4, warn = F)
+#Drop row id
+heart<- heart[-c(1)]
 ```
-*Only these four columns have outliers
-+ trestbps
-+ chol
-+ oldpeak
-+ thal
 
-# Data preparation
-We replaced outliers with 5th and 95th percentile values.
+
+```{r}
+## Checking outlier
+#3 outlier
+rosnerTest(heart$age, k = 4, warn = F)
+#3 outlier
+rosnerTest(heart$cp, k = 4, warn = F)
+#3 outlier
+rosnerTest(heart$trestbps, k = 4, warn = F)
+#0 outliers
+rosnerTest(heart$chol, k = 4, warn = F)
+#4 outliers
+rosnerTest(heart$fbs, k = 4, warn = F)
+#4 outliers
+rosnerTest(heart$restecg, k = 4, warn = F)
+#4 outliers
+rosnerTest(heart$thalach, k = 4, warn = F)
+#4 outliers
+rosnerTest(heart$exang, k = 4, warn = F)
+#4 outliers
+rosnerTest(heart$oldpeak, k = 4, warn = F)
+#4 outliers
+rosnerTest(heart$slope, k = 4, warn = F)
+#0 outliers
+rosnerTest(heart$ca, k = 4, warn = F)
+#2 outliers
+rosnerTest(heart$thal, k = 4, warn = F)
+```
+
+## Standardize data and outlier handling/processing
+1. Replaced outliers with 5th and 95th percentile values
+2. Scale data
 
 ```{r}
 #replace outliers with 5th and 95th percentile values
@@ -169,36 +284,48 @@ capOutlier <- function(x){
    x[x > (qnt[2] + H)] <- caps[2]
    return(x)
 }
-combineData$trestbps=capOutlier(combineData$trestbps)
-combineData$chol=capOutlier(combineData$chol)
-combineData$oldpeak=capOutlier(combineData$oldpeak)
-combineData$thal=capOutlier(combineData$thal)
+heart$trestbps=capOutlier(heart$trestbps)
+heart$chol=capOutlier(heart$chol)
+heart$oldpeak=capOutlier(heart$oldpeak)
+heart$thal=capOutlier(heart$thal)
 
-
-
-#scale data, and remove rowid and target
-data_scaled <- data.frame(scale(combineData[-c(1, 15)]))
-#visualize how well data was scaled
-boxplot(data_scaled)
-#scaling looks good
 ```
 
+```{r}
+data <-heart
+toscaledata=heart[,c(1,4,5,8,10)]
+#scale data, and remove target
+scaled <- data.frame(scale(toscaledata))
+#merge data set
+data$age <- scaled$age
+data$trestbps <- scaled$trestbps
+data$chol <- scaled$chol
+data$thalach <- scaled$thalach
+data$oldpeak <- scaled$oldpeak
+
+```
+
+## Visualize prepared data
+* Data is now scaled
+* Outliers have been replaced/processed
 
 
 ```{r}
-#corr of data
-corrmatrix <- cor(data_scaled)
-corrplot(corrmatrix, method = 'pie', type="upper")
+
+boxplot(data)
+
 ```
-There is no two columns have strong correlations bigger than 50%
 
 
 
-# PCA and reduction
+## PCA and Reduction of features
+Let's attempt to reduce dimensionality of dataset with Principal Component Analysis (PCA)
+We use two methods, princomp and prcomp for PCA. Both show that first 7-10 features give us 80%-90% of the variance, and that no one variable is overbearing.Due to the high number of principal components relative to input features, we are not reducing any dimensions using PCA.  
+
 
 ```{r}
 # ##### Build pca using princomp
-data_pca1 <- princomp(data_scaled)
+data_pca1 <- princomp(data)
 #examine the importance of PCs
 summary(data_pca1)
 # inspect principal components
@@ -211,14 +338,11 @@ fviz_pca_var(data_pca1,
              )
 ```
 
-Above shows that first 10 give us 89% of the variance
-We don't see one variable being overbearing
-
 
 ```{r}
-# ###### using princomp first 10 give us 90% of the variance
+# ###### using princomp first 7 give us 85% of the variance
 # ##### build pca using prcomp
-data_pca2 <- prcomp(data_scaled)
+data_pca2 <- prcomp(data)
 summary(data_pca2)
 #above shows first 6 account for 88% variance
 #plot
@@ -232,50 +356,8 @@ fviz_pca_var(data_pca2,
              repel = TRUE     # Avoid text overlapping
              )
 ```
-Above shows first 10 account for 89% variance
 
-Please note: The result from PCA tells us there is no varaiables which dominate, therefore we are not able to reduce any demisions.  
-
-## Exploration of the data
-
-Drop row id
-```{r}
-data<- combineData[-c(1)]
-```
-
-We explored the different variables in combineData to see which ones were more likes to affect our random forest algorithm.
-```{r}
-names(data)
-```
-```{r}
-library(ggplot2)
-```
-
-Looks like male has better change to get heart desease
-```{r echo=FALSE}
-plot(factor(target) ~ sex, data = data)
-title(main="Target by Gender")
-```
-
-
-The higher cholestoral is not necessary the higher change of getting heart desease.
-```{r echo=FALSE}
-ggplot(data=data, aes(chol, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Serum cholestoral in mg/dl") + theme_bw()
-```
-
-And blood presssure is not playing a signicent role in heart deasease
-```{r echo=FALSE}
-ggplot(data=data, aes(trestbps, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Resting blood pressure") + theme_bw()
-```
-
-If you heart beat too fast when you are resting, you should be more careful.
-```{r echo=FALSE}
-ggplot(data=data, aes(thalach, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By heart rate ") + theme_bw()
-```
-
-```{r}
-names(data)
-```
+## Partition dataset into training (229 subjects, 75%) and test(25%) datasets
 
 ```{r}
 library(caret)
@@ -283,11 +365,26 @@ set.seed(3456)
 trainingIndex = createDataPartition(data$age, p = 0.75, list=FALSE)
 trainData = data[trainingIndex,]
 testData = data[-trainingIndex,]
+#TODO
 nrow(trainData)
+
 ```
 
 
-##Logistic Regression Model
+# Modeling 
+
+## Logistic Regression Model
+
+### Run the model against training data using the Binomial algo
+
+LR Modeling demonstrates that following variables are predictors of target variable - sex,cp, restecg, exang, oldpeak, ca. 
+To evaluate and refine the model we take the following steps- 
+* Compute average prediction for true outcomes
+   + TP are 78%, that is predicting presence of heart disease correctly 78% of the time 
+   + TN are 26%, that is predicting no heart disease when there is none 26% of the time
+   + 78% is not bad, it can be improved
+
+
 ```{r}
 lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
 ###Shows that the following variables are predictors of target variable
@@ -300,8 +397,21 @@ summary(lr.prob)
 #TN are 26%, that is predicting no heart disease when there is none 26% of the time
 #78% is not bad, it can be improved
 tapply(lr.prob,trainData$target,mean)
-#now we will convert probabilities to predictions using ROC curves
+
+```
+
+### Find the threshold probability to delineate between heart disease= 0 or 1
+
+* ROC curve will help find the threshold
+   + We want high TRUE POSITIVES or Sensitivity for diagnosing heart disease, and are ok with higher false positive 
+   + Therefore the threshold is at (0.9,0.2) where 90% with heart disease are diagnosed correctly
+   + At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease 
+
+```{r}
+
 #ROC curve will help find the threshold
+
+#now we will convert probabilities to predictions using ROC curves
 lr.predict = prediction(lr.prob, trainData$target)
 lr.perf = performance(lr.predict, "tpr", "fpr")
 # Plot ROC curve
@@ -314,6 +424,22 @@ plot(lr.perf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1
 #Therefore the threshold is at (0.9,0.2) where 90% with heart disease are diagnosed correctly
 #At this the threshold is 0.5. This implies that a probability above 0.5 should be classified as heart disease 
 
+```
+
+### Evaluate model by predicting on test dataset and generating the ROC curve
+The accuracy of the test depends on how well the test separates the group being tested into those with and without the disease in question. Accuracy is measured by the area under the ROC curve. An area of 1 represents a perfect test; an area of .5 represents a worthless test. A rough guide for classifying the accuracy of a diagnostic test is the traditional academic point system:
+
+.90-1 = excellent (A)
+.80-.90 = good (B)
+.70-.80 = fair (C)
+.60-.70 = poor (D)
+.50-.60 = fail (F)
+
+* With 0.5 as threshold, prediction on test dataset leads to accuracy = 89%
+* Plot the logistic regression model against predictor variables
+
+
+```{r}
 
 #with 0.5 as threshold, lets predict on test dataset
 lrtest.prob=predict(lr.fit,type="response", newdata=testData)
@@ -331,13 +457,16 @@ auc.lr
 
 ###plot the logistic regression model against predictor variables
 # After we have summarised our model, we will visualize it through the following plots
-plot(allEffects(lr.fit))
-
+#plot(allEffects(lr.fit))
 
 ```
 
 
-# Now use Decision Tree algorithm and plot using rpart
+## Decision Tree algorithm
+
+ROC curve shows accuracy of this model is 77%
+
+
 ```{r}
 dt.fit <- rpart(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, trainData,method = 'class')
 dt.predict <- predict(dt.fit, testData, type = 'class')
@@ -353,20 +482,27 @@ auc.dt
 
 ```
 
-# Now use Artificial Neural Networks
-#since predicted variable is probabilty and continous, convert to  0 or 1 factor
+## Artificial Neural Networks (ANN) Model
+
+ROC curve shows accuracy of this model is 78%
+
+
 ```{r}
 ann.fit =neuralnet(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca,trainData,linear.output=FALSE)
 plot(ann.fit)
-ann.predict=compute(ann.fit,testData)
+ann.predict=neuralnet::compute(ann.fit,testData)
 annResult=ann.predict$net.result
+#since predicted variable is probabilty and continous, convert to  0 or 1 factor
 annResult=ifelse(annResult>0.5,1,0)
 auc.ann = roc(testData$target, factor(annResult, ordered = TRUE), plot = TRUE, col = "blue")
 auc.ann
 ```
 
-## Now use Gradient Boosting. This uses ensemble models like weak decision trees
-##These decision trees combine together to form a strong model of gradient boosting
+## Gradient Boosting Model
+This uses ensemble models like weak decision trees. These decision trees combine together to form a strong model of gradient boosting
+
+ROC curve shows accuracy of this model is 86%
+
 ```{r}
 system.time(
 gbm.fit <- gbm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca
