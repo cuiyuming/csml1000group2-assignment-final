@@ -19,7 +19,12 @@ library(rpart.plot)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-
+  tags$head(
+    tags$style(HTML("   
+     .col-sm-4 { width: 25%;}
+     .col-sm-8 { width: 75%;}
+    "))
+  ),
     # Application title
     titlePanel("Heart Disease Cleveland"),
 
@@ -57,13 +62,14 @@ ui <- fluidPage(
                         tabPanel("UnSupervised Plot",  
                                  fluidRow(
                                    splitLayout(cellWidths = c("50%", "80%"), plotOutput("plot_princomp"), plotOutput("plot_prcomp"))
-                              
                                  )
                         ),
                         tabPanel("Supervised Plot",  
                                  fluidRow(
-                                   splitLayout(cellWidths = c("50%", "50%"), plotOutput("plot_model_lr"), plotOutput("plot_model_dt")),
-                                   splitLayout(cellWidths = c("50%", "80%"), plotOutput("plot_model_ann"), plotOutput("plot_model_gb"))
+                                   plotOutput("plot_model_lr")
+                                 ),
+                                 fluidRow(
+                                   plotOutput("plot_model_dt")
                                  )
                         ),
                         
@@ -109,53 +115,46 @@ server <- function(input, output) {
   
   pca.princomp <- princomp(data)
   pca.prcomp <- prcomp(data)
-  
-  
-  # data$age <- scaled$age
-  # data$trestbps <- scaled$trestbps
-  # data$chol <- scaled$chol
-  # data$thalach <- scaled$thalach
-  # data$oldpeak <- scaled$oldpeak
     
-    output$plot_predicted <- renderPlot({
-      age <- as.numeric(input$age)
-      age <- ((age - mean(heart$age))/sd(heart$age))
-      
-      trestbps <- as.numeric(input$trestbps)
-      trestbps <- ((trestbps - mean(heart$trestbps))/sd(heart$trestbps))
-      
-      chol <- as.numeric(input$chol)
-      chol <- ((chol - mean(heart$chol))/sd(heart$chol))
-      
-      thalach <- as.numeric(input$thalach)
-      thalach <- ((thalach - mean(heart$thalach))/sd(heart$thalach))
-      
-      oldpeak <- as.numeric(input$oldpeak)
-      oldpeak <- ((oldpeak - mean(heart$oldpeak))/sd(heart$oldpeak))
+  output$plot_predicted <- renderPlot({
+  age <- as.numeric(input$age)
+  age <- ((age - mean(heart$age))/sd(heart$age))
+  
+  trestbps <- as.numeric(input$trestbps)
+  trestbps <- ((trestbps - mean(heart$trestbps))/sd(heart$trestbps))
+  
+  chol <- as.numeric(input$chol)
+  chol <- ((chol - mean(heart$chol))/sd(heart$chol))
+  
+  thalach <- as.numeric(input$thalach)
+  thalach <- ((thalach - mean(heart$thalach))/sd(heart$thalach))
+  
+  oldpeak <- as.numeric(input$oldpeak)
+  oldpeak <- ((oldpeak - mean(heart$oldpeak))/sd(heart$oldpeak))
 
-      inputData <- data.frame("age" = age,
-                              "sex" = as.numeric(input$sex),
-                              "cp" = as.numeric(input$cp),
-                              "trestbps" = trestbps,
-                              "chol" = chol,
-                              "fbs" = as.numeric(input$fbs),
-                              "restecg" = as.numeric(input$restecg),
-                              "thalach" = thalach,
-                              "exang" = as.numeric(input$exang),
-                              "oldpeak" = oldpeak,
-                              "slope" = as.numeric(input$slope),
-                              "ca" = as.numeric(input$ca),
-                              "thal" = as.numeric(input$thal))
+  inputData <- data.frame("age" = age,
+                          "sex" = as.numeric(input$sex),
+                          "cp" = as.numeric(input$cp),
+                          "trestbps" = trestbps,
+                          "chol" = chol,
+                          "fbs" = as.numeric(input$fbs),
+                          "restecg" = as.numeric(input$restecg),
+                          "thalach" = thalach,
+                          "exang" = as.numeric(input$exang),
+                          "oldpeak" = oldpeak,
+                          "slope" = as.numeric(input$slope),
+                          "ca" = as.numeric(input$ca),
+                          "thal" = as.numeric(input$thal))
       
 
       lr_predcited_value <- predict(lr_model, inputData, type="response")
-       dt_predcited_value <- predict(dt_model, inputData, type = 'class')
+      # dt_predcited_value <- predict(dt_model, inputData, type = 'class') 
        ann_predcited_value <- predict(ann_model, inputData)
-       gbm.iter = gbm.perf(gb_model, method = "test")
-       gb_predcited_value <-  predict(gb_model, newdata = inputData, n.trees = gbm.iter)
+       #gbm.iter = gbm.perf(gb_model, method = "test") 
+       #gb_predcited_value <-  predict(gb_model, newdata = inputData, n.trees = gbm.iter)
 
-      predictedData <- c(lr_predcited_value,dt_predcited_value,ann_predcited_value,gb_predcited_value)
-      models <- c("LR", "DT", "ANN", "GB")
+      predictedData <- c(lr_predcited_value, ann_predcited_value)
+      models <- c("Logistic Regression", "Artifical Neuro Network")
 
       df1 <- data.frame(models, predictedData)
       df2 <- melt(df1, id.vars='models')
