@@ -355,7 +355,6 @@ data$trestbps <- scaled$trestbps
 data$chol <- scaled$chol
 data$thalach <- scaled$thalach
 data$oldpeak <- scaled$oldpeak
-save(data, file = "./HeartDiseaseCleveland/scaledData.RData")
 ```
 
 **Visualize prepared data**
@@ -479,10 +478,62 @@ corrmatrix <- cor(heart[,c(-1)])
 corrplot(corrmatrix, method = 'number', type="upper")
 ```
 
+We can see there are 14% corralation between the new cluster with the target virable.
+
+# Clustering using Hierarchical Clustering
+We implement a Ward’s hierarchical clustering procedure:
+```{r}
+#distance matrix
+d <- dist(data, method = "euclidean") 
+#clustering
+h_clust <- hclust(d, method = "ward.D2") 
+```
+Display dendrogram with cut rects, try different h values, we finally we decide 15 is value we are looking for to cluster the dataset in 4 clusters.
+```{r}
+plot(h_clust)
+rect.hclust(h_clust , k = 4, border = 2:7)
+abline(h = 15, col = 'red')
+```
+Display clusters in different colors
+```{r}
+library(dendextend)
+avg_dend_obj <- as.dendrogram(h_clust)
+avg_col_dend <- color_branches(avg_dend_obj, h =  15)
+plot(avg_col_dend)
+```
+
+Extract clusters
+```{r}
+groups <- cutree(h_clust,k=4)
+heart$cluster_h = groups
+```
+The cluster looks great, let's put the cluster back to the original dataset.
+
+```{r}
+#corr of data
+corrmatrix <- cor(heart[,c(-1)])
+corrplot(corrmatrix, method = 'number', type="upper")
+```
+Surprisingly Hierarchical Clustering has much greater correclations with the target variable -56%
+
+```{r}
+data <-heart
+toscaledata=heart[,c(1,4,5,8,10)]
+#scale data, and remove target
+scaled <- data.frame(scale(toscaledata))
+#merge data set
+data$age <- scaled$age
+data$trestbps <- scaled$trestbps
+data$chol <- scaled$chol
+data$thalach <- scaled$thalach
+data$oldpeak <- scaled$oldpeak
+save(data, file = "./HeartDiseaseCleveland/scaledData.RData")
+```
 
 ### Partition dataset
 1. Training - 75%, 229 subjects
 2. Testing - 25%, 74 subjects
+
 
 ```{r}
 library(caret)
@@ -493,8 +544,6 @@ testData = data[-trainingIndex,]
 
 #Save train data for shiny app
 save(trainData, file = "./HeartDiseaseCleveland/trainData.RData")
-
-
 ```
 
 
@@ -541,7 +590,7 @@ Looking at the p values the **following variables are predictors of target varia
 
 
 ```{r}
-lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
+lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca+cluster_h+cluster_kmeans, data=trainData, family = binomial)
 
 #Save model for shiny app
 saveRDS(lr.fit, "./HeartDiseaseCleveland/logisticRegression.rds")
@@ -680,8 +729,34 @@ ggplot(data=data, aes(x=cp, fill=as.factor(target))) +
 ```{r echo=FALSE}
 ggplot(data=data, aes(oldpeak, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Stress Test Depression") + theme_bw()
 ```
+**Lower depression during stress test predicts heart disease** 
+
+```{r echo=FALSE}
+ggplot(data=data, aes(cluster_h, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Stress Hirachy cluster") + theme_bw()
+```
+
+We found group 2 seems have most chance of getting heart desease.
+
+Let do some investigation between cluster with age.
+```{r echo=FALSE}
+ggplot(data=heart, aes(cluster_h, age)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Age By Stress Hirachy cluster") + theme_bw()
+```
+It looks like h-cluster group 2 have their ages close to 50.
+
+Let do some investigation between h cluster (cluster 2) with gender
+```{r echo=FALSE}
+ggplot(data=heart, aes(cluster_h, sex)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Age By Stress Hirachy cluster") + theme_bw()
+```
+From the result, we find group 2 are mostly female.
 
 
+Let do some investigation between h cluster (cluster 2) with chol
+```{r echo=FALSE}
+ggplot(data=heart, aes(cluster_h, chol)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Age By Stress Hirachy cluster") + theme_bw()
+```
+We found group 2 also have serum cholestoral around 250 mg/dl.
+
+*** We can conlude female with age 50 and cholestrol around 250 mg/dl will have a better change to get heart disease.
 
 11. **Number of Colored Vessels** versus Target variable
 
