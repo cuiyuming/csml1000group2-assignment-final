@@ -60,7 +60,7 @@ Attribute Information:
 3. Since prediction of target variable is a probability, use the models to figure out the probability threshold to delineate between no heart disease versus presence of heart disease 
 
 
-```{r }
+```{r}
 library(Hmisc)
 library(caret)
 library(mice)
@@ -590,7 +590,7 @@ Looking at the p values the **following variables are predictors of target varia
 
 
 ```{r}
-lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca+cluster_h+cluster_kmeans, data=trainData, family = binomial)
+lr.fit <- glm(target~ age+sex+cp+trestbps+chol+fbs+restecg+thalach+exang+oldpeak+slope+ca, data=trainData, family = binomial)
 
 #Save model for shiny app
 saveRDS(lr.fit, "./HeartDiseaseCleveland/logisticRegression.rds")
@@ -766,6 +766,7 @@ We found group 2 also have serum cholestoral around 250 mg/dl.
 
 ggplot(data=data, aes(x=ca, fill=as.factor(target))) +
   geom_bar() +
+   
    ggtitle("Target By Number of Colored Vessels")
 
 ```
@@ -827,7 +828,6 @@ ggplot(data=data, aes(x=ca, fill=as.factor(target))) +
    ggtitle("Target By Number of Colored Vessels")
 
 ```
-
 
 
 
@@ -950,4 +950,16 @@ auc.gbm = roc(testData$target, gbm.test, plot = TRUE, col = "red")
 print(auc.gbm)
 auc.gbm
 ```
+
+### Conclusion:
+
+In Cleveland
+Heart disease is prevalent- 45% males, 74% females
+For females, much higher than US average of 52%
+Woman with 50 years old and serum cholestoral is around 250 mg/dl, should be more careful.
+In general
+   Everyone above 60 should periodically check for heart disease
+   Everyone should carefully watch and control Fasting Blood Sugar
+   During heart checkup- Stress Test, ECG, Color of vessels will determine whether you have heart disease or not
+ 
 

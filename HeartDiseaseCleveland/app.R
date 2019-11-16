@@ -1,11 +1,11 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+---
+# title: "CSML1000-003-O-F19 - Group 2 Project - Shiny App"
+# author: "Rajiv Kaushik, Yuming Cui, Madana Bolla, Pratik Chandwani, Konstantin Krassavine"
+# date: "11/15/2019"
+# output: html_document
+# published at https://yumingcui.shinyapps.io/HeartDiseaseCleveland/
+---
+  
 
 library(shiny)
 library(ggplot2)
@@ -50,8 +50,9 @@ ui <- fluidPage(
        
         mainPanel(
             tabsetPanel(type = "tabs",
-                        tabPanel("Predicted Plot",  
-                                 plotOutput("plot_predicted", , height = "800px")
+                        tabPanel("Predicted Result",  
+                                 br(),
+                                 h1(textOutput("text_predicted"))
                         ),
                         tabPanel("Corralation Plot",  
                                  fluidRow(
@@ -120,52 +121,43 @@ server <- function(input, output) {
   pca.princomp <- princomp(data)
   pca.prcomp <- prcomp(data)
     
-  output$plot_predicted <- renderPlot({
-  age <- as.numeric(input$age)
-  age <- ((age - mean(heart$age))/sd(heart$age))
-  
-  trestbps <- as.numeric(input$trestbps)
-  trestbps <- ((trestbps - mean(heart$trestbps))/sd(heart$trestbps))
-  
-  chol <- as.numeric(input$chol)
-  chol <- ((chol - mean(heart$chol))/sd(heart$chol))
-  
-  thalach <- as.numeric(input$thalach)
-  thalach <- ((thalach - mean(heart$thalach))/sd(heart$thalach))
-  
-  oldpeak <- as.numeric(input$oldpeak)
-  oldpeak <- ((oldpeak - mean(heart$oldpeak))/sd(heart$oldpeak))
+  output$text_predicted <- renderText({
+    age <- as.numeric(input$age)
+    age <- ((age - mean(heart$age))/sd(heart$age))
+    
+    trestbps <- as.numeric(input$trestbps)
+    trestbps <- ((trestbps - mean(heart$trestbps))/sd(heart$trestbps))
+    
+    chol <- as.numeric(input$chol)
+    chol <- ((chol - mean(heart$chol))/sd(heart$chol))
+    
+    thalach <- as.numeric(input$thalach)
+    thalach <- ((thalach - mean(heart$thalach))/sd(heart$thalach))
+    
+    oldpeak <- as.numeric(input$oldpeak)
+    oldpeak <- ((oldpeak - mean(heart$oldpeak))/sd(heart$oldpeak))
 
-  inputData <- data.frame("age" = age,
-                          "sex" = as.numeric(input$sex),
-                          "cp" = as.numeric(input$cp),
-                          "trestbps" = trestbps,
-                          "chol" = chol,
-                          "fbs" = as.numeric(input$fbs),
-                          "restecg" = as.numeric(input$restecg),
-                          "thalach" = thalach,
-                          "exang" = as.numeric(input$exang),
-                          "oldpeak" = oldpeak,
-                          "slope" = as.numeric(input$slope),
-                          "ca" = as.numeric(input$ca),
-                          "thal" = as.numeric(input$thal))
+    inputData <- data.frame("age" = age,
+                            "sex" = as.numeric(input$sex),
+                            "cp" = as.numeric(input$cp),
+                            "trestbps" = trestbps,
+                            "chol" = chol,
+                            "fbs" = as.numeric(input$fbs),
+                            "restecg" = as.numeric(input$restecg),
+                            "thalach" = thalach,
+                            "exang" = as.numeric(input$exang),
+                            "oldpeak" = oldpeak,
+                            "slope" = as.numeric(input$slope),
+                            "ca" = as.numeric(input$ca),
+                            "thal" = as.numeric(input$thal))
       
 
       lr_predcited_value <- predict(lr_model, inputData, type="response")
-      # dt_predcited_value <- predict(dt_model, inputData, type = 'class') 
-       ann_predcited_value <- predict(ann_model, inputData)
-       #gbm.iter = gbm.perf(gb_model, method = "test") 
-       #gb_predcited_value <-  predict(gb_model, newdata = inputData, n.trees = gbm.iter)
-
-      predictedData <- c(lr_predcited_value, ann_predcited_value)
-      models <- c("Logistic Regression", "Artifical Neuro Network")
-
-      df1 <- data.frame(models, predictedData)
-      df2 <- melt(df1, id.vars='models')
-
-      ggplot(df2, aes(x=models, y=predictedData, fill=variable)) + geom_bar(stat='identity', position='dodge') + coord_cartesian(ylim = c(0, 1))
+      
+      paste("The change you will get heart disease is ", round(lr_predcited_value*100), "%")
       
     })
+      
 
     output$plot_age <- renderPlot({
         ggplot(data=heart, aes(age, target)) + geom_jitter(height=0.03, alpha=0.2) + stat_smooth(method="loess", alpha=0.2, col="red") + ggtitle("Target By Age") + theme_bw()
